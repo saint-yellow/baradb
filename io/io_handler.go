@@ -1,6 +1,8 @@
 package io
 
-const DataFilePermission = 644
+import "io/fs"
+
+const DataFilePermission fs.FileMode = 0644
 
 // IOHandler Abstract I/O interface
 type IOHandler interface {
