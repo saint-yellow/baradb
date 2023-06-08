@@ -12,4 +12,22 @@ type IOHandler interface {
 	Sync() error
 	// Close Close a file
 	Close() error
+	// Size Get the size of a data file (unit: B)
+	Size() (int64, error)
+}
+
+type IOHandlerType = int8
+
+const (
+	FileIOHandler IOHandlerType = iota + 1
+)
+
+// NewIOHandler Constructs an IOHandler, such as FileIO
+func NewIOHandler(t IOHandlerType, filePath string) (IOHandler, error) {
+	switch t {
+	case FileIOHandler:
+		return NewFileIO(filePath)
+	default:
+		panic("Unsupproted I/O handler type")
+	}
 }

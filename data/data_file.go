@@ -1,6 +1,12 @@
 package data
 
-import "github.com/saint-yellow/baradb/io"
+import (
+	"fmt"
+	"hash/crc32"
+	"path/filepath"
+
+	"github.com/saint-yellow/baradb/io"
+)
 
 const DataFileSuffix = ".data"
 
@@ -13,12 +19,77 @@ type DataFile struct {
 
 // OpenDataFile open a data file
 func OpenDataFile(directory string, fileID uint32) (*DataFile, error) {
-	return nil, nil
+	fileName := fmt.Sprintf("%09d%s", fileID, DataFileSuffix)
+	filePath := filepath.Join(directory, fileName)
+
+	ioHandler, err := io.NewIOHandler(io.FileIOHandler, filePath)
+	if err != nil {
+		return nil, err
+	}
+
+	dataFile := &DataFile{
+		FileID:      fileID,
+		WriteOffset: 0,
+		IOHandler:   ioHandler,
+	}
+	return dataFile, nil
 }
 
 // ReadLogRecord Read single log record by given offset in a data file
 func (df *DataFile) ReadLogRecord(offset int64) (*LogRecord, int64, error) {
-	return nil, 0, nil
+	// Get the size of the data file
+	fileSize, err := df.IOHandler.Size()
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// Make sure the bytes of the header are always included in the data file
+	var headerBytes int64 = maxLogRecordHeaderSize
+	if offset+headerBytes > fileSize {
+		headerBytes = fileSize - offset
+	}
+
+	// Get the header
+	headerBuffer, err := df.readNBytes(headerBytes, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// Decode the header
+	header, headerSize := decodeLogRecordHeader(headerBuffer)
+	if header == nil {
+		return nil, 0, io.ErrEOF
+	}
+	if header.crc == 0 && header.keySize == 0 && header.valueSize == 0 {
+		return nil, 0, io.ErrEOF
+	}
+
+	keySize, valueSize := int64(header.keySize), int64(header.valueSize)
+	logRecordSize := headerSize + keySize + valueSize
+
+	// Construct a log record
+	logRecord := &LogRecord{
+		Type: header.logRecordType,
+	}
+
+	if keySize > 0 || valueSize > 0 {
+		kvBuffer, err := df.readNBytes(keySize+valueSize, offset+headerSize)
+		if err != nil {
+			return nil, 0, err
+		}
+
+		logRecord.Key = kvBuffer[:keySize]
+		logRecord.Value = kvBuffer[keySize:]
+	}
+
+	// Validate the CRC value of the log record
+	logRecordCRC := logRecord.crc(headerBuffer[crc32.Size:headerSize])
+	if logRecordCRC != header.crc {
+		return nil, 0, ErrInvalidCRC
+	}
+
+	return logRecord, logRecordSize, nil
+
 }
 
 func (df *DataFile) Sync() error {
@@ -27,4 +98,15 @@ func (df *DataFile) Sync() error {
 
 func (df *DataFile) Write(data []byte) (int, error) {
 	return df.IOHandler.Write(data)
+}
+
+func (df *DataFile) Close() error {
+	return df.IOHandler.Close()
+}
+
+// readNBytes Read n bytes from given offset in a data file.
+func (df *DataFile) readNBytes(n int64, offset int64) ([]byte, error) {
+	b := make([]byte, n)
+	_, err := df.IOHandler.Read(b, offset)
+	return b, err
 }
