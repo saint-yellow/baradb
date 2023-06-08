@@ -117,6 +117,33 @@ func (db *DB) Get(key []byte) ([]byte, error) {
 	return lr.Value, nil
 }
 
+// Delete Delete data by the given key
+func (db *DB) Delete(key []byte) error {
+	if len(key) == 0 {
+		return ErrKeyIsEmpty
+	}
+
+	// Maybe the data never exist, or it has been deleted before
+	if p := db.index.Get(key); p == nil {
+		return nil
+	}
+
+	lr := &data.LogRecord{
+		Key:  key,
+		Type: data.DeletedLogRecord,
+	}
+
+	if _, err := db.appendLogRecord(lr); err != nil {
+		return err
+	}
+
+	if ok := db.index.Delete(key); !ok {
+		return ErrIndexUpdateFailed
+	}
+
+	return nil
+}
+
 // appendLogRecord appends a log record to the current active data file in DB
 func (db *DB) appendLogRecord(lr *data.LogRecord) (*data.LogRecordPosition, error) {
 	db.mu.Lock()
