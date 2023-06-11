@@ -3,18 +3,19 @@ package data
 import (
 	"fmt"
 	"hash/crc32"
+	"io"
 	"path/filepath"
 
-	"github.com/saint-yellow/baradb/io"
+	"github.com/saint-yellow/baradb/io_handler"
 )
 
 const DataFileSuffix = ".data"
 
 // DataFile represents a data file in a baradb engine instance
 type DataFile struct {
-	FileID      uint32       // FileID identifies of a data file
-	WriteOffset int64        // WriteOffset indicates the offset of the written data in a data file
-	IOHandler   io.IOHandler // IOHandler is used to handle I/O operations in a data file
+	FileID      uint32               // FileID identifies of a data file
+	WriteOffset int64                // WriteOffset indicates the offset of the written data in a data file
+	IOHandler   io_handler.IOHandler // IOHandler is used to handle I/O operations in a data file
 }
 
 // OpenDataFile open a data file
@@ -22,7 +23,7 @@ func OpenDataFile(directory string, fileID uint32) (*DataFile, error) {
 	fileName := fmt.Sprintf("%09d%s", fileID, DataFileSuffix)
 	filePath := filepath.Join(directory, fileName)
 
-	ioHandler, err := io.NewIOHandler(io.FileIOHandler, filePath)
+	ioHandler, err := io_handler.NewIOHandler(io_handler.FileIOHandler, filePath)
 	if err != nil {
 		return nil, err
 	}
@@ -58,10 +59,10 @@ func (df *DataFile) ReadLogRecord(offset int64) (*LogRecord, int64, error) {
 	// Decode the header
 	header, headerSize := decodeLogRecordHeader(headerBuffer)
 	if header == nil {
-		return nil, 0, io.ErrEOF
+		return nil, 0, io.EOF
 	}
 	if header.crc == 0 && header.keySize == 0 && header.valueSize == 0 {
-		return nil, 0, io.ErrEOF
+		return nil, 0, io.EOF
 	}
 
 	keySize, valueSize := int64(header.keySize), int64(header.valueSize)

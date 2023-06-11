@@ -9,7 +9,7 @@ import (
 	"sync"
 
 	"github.com/saint-yellow/baradb/data"
-	"github.com/saint-yellow/baradb/index"
+	"github.com/saint-yellow/baradb/indexer"
 )
 
 // DB baradb engine instance
@@ -19,7 +19,7 @@ type DB struct {
 	fileIDs       []int
 	activeFile    *data.DataFile
 	inactiveFiles map[uint32]*data.DataFile
-	index         index.Indexer
+	index         indexer.Indexer
 }
 
 // LaunchDB launches a DB engine instance
@@ -42,7 +42,7 @@ func LaunchDB(options Options) (*DB, error) {
 		options:       options,
 		activeFile:    nil,
 		inactiveFiles: make(map[uint32]*data.DataFile, 0),
-		index:         index.NewIndexer(options.IndexerType),
+		index:         indexer.NewIndexer(options.IndexerType),
 	}
 
 	if err := db.loadDataFiles(); err != nil {
