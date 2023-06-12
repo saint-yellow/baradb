@@ -90,7 +90,6 @@ func (df *DataFile) ReadLogRecord(offset int64) (*LogRecord, int64, error) {
 	}
 
 	return logRecord, logRecordSize, nil
-
 }
 
 func (df *DataFile) Sync() error {
