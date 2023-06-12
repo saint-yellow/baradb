@@ -19,7 +19,7 @@ type DB struct {
 	fileIDs       []int
 	activeFile    *data.DataFile
 	inactiveFiles map[uint32]*data.DataFile
-	index         indexer.Indexer
+	indexer       indexer.Indexer
 }
 
 // LaunchDB launches a DB engine instance
@@ -42,7 +42,7 @@ func LaunchDB(options Options) (*DB, error) {
 		options:       options,
 		activeFile:    nil,
 		inactiveFiles: make(map[uint32]*data.DataFile, 0),
-		index:         indexer.NewIndexer(options.IndexerType),
+		indexer:       indexer.NewIndexer(options.IndexerType),
 	}
 
 	if err := db.loadDataFiles(); err != nil {
@@ -73,7 +73,7 @@ func (db *DB) Put(key, value []byte) error {
 		return err
 	}
 
-	if ok := db.index.Put(key, position); !ok {
+	if ok := db.indexer.Put(key, position); !ok {
 		return ErrIndexUpdateFailed
 	}
 
@@ -90,7 +90,7 @@ func (db *DB) Get(key []byte) ([]byte, error) {
 		return nil, ErrKeyIsEmpty
 	}
 
-	position := db.index.Get(key)
+	position := db.indexer.Get(key)
 	if position == nil {
 		return nil, ErrKeyNotFound
 	}
@@ -124,7 +124,7 @@ func (db *DB) Delete(key []byte) error {
 	}
 
 	// Maybe the data never exist, or it has been deleted before
-	if p := db.index.Get(key); p == nil {
+	if p := db.indexer.Get(key); p == nil {
 		return nil
 	}
 
@@ -137,7 +137,7 @@ func (db *DB) Delete(key []byte) error {
 		return err
 	}
 
-	if ok := db.index.Delete(key); !ok {
+	if ok := db.indexer.Delete(key); !ok {
 		return ErrIndexUpdateFailed
 	}
 
@@ -157,7 +157,7 @@ func (db *DB) appendLogRecord(lr *data.LogRecord) (*data.LogRecordPosition, erro
 
 	encodedRecord, encodedLength := data.EncodeLogRecord(lr)
 	if db.activeFile.WriteOffset+encodedLength > db.options.MaxDataFileSize {
-		if err := db.activeFile.IOHandler.Close(); err != nil {
+		if err := db.activeFile.Sync(); err != nil {
 			return nil, err
 		}
 
@@ -168,13 +168,12 @@ func (db *DB) appendLogRecord(lr *data.LogRecord) (*data.LogRecordPosition, erro
 		}
 	}
 
-	if _, err := db.activeFile.IOHandler.Write(encodedRecord); err != nil {
+	if _, err := db.activeFile.Write(encodedRecord); err != nil {
 		return nil, err
 	}
-	db.activeFile.WriteOffset += encodedLength
 
 	if db.options.WriteSync {
-		if err := db.activeFile.IOHandler.Sync(); err != nil {
+		if err := db.activeFile.Sync(); err != nil {
 			return nil, err
 		}
 	}
@@ -268,9 +267,9 @@ func (db *DB) loadIndex() error {
 
 			lrp := &data.LogRecordPosition{FileID: fileID, Offset: offset}
 			if lr.Type == data.DeletedLogRecord {
-				db.index.Delete(lr.Key)
+				db.indexer.Delete(lr.Key)
 			} else {
-				db.index.Put(lr.Key, lrp)
+				db.indexer.Put(lr.Key, lrp)
 			}
 
 			offset += n
