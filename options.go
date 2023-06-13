@@ -5,11 +5,12 @@ import "github.com/saint-yellow/baradb/indexer"
 // Options represents options of a DB engine instance
 type Options struct {
 	Directory       string              // Directory of a DB engine instance where data files are stored in
-	MaxDataFileSize int64               // Maximum size of a every single data file
+	MaxDataFileSize int64               // Maximum size of a every single data file (uint: Byte)
 	WriteSync       bool                // Indicates whether persist data after writing
 	IndexerType     indexer.IndexerType // Chooses an indexer (BTree/ART/...)
 }
 
+// checkOptions
 func checkOptions(options Options) error {
 	if options.Directory == "" {
 		return ErrDirectoryIsEmpty
@@ -25,7 +26,7 @@ func checkOptions(options Options) error {
 // DefaultOptions Default options for launching DB engine
 var DefaultOptions = Options{
 	Directory:       "/tmp/baradb",
-	MaxDataFileSize: 256 * 1024 * 1024, // 256MB
+	MaxDataFileSize: 1 * 1024 * 1024, // 4MB
 	WriteSync:       false,
 	IndexerType:     indexer.Btree,
 }

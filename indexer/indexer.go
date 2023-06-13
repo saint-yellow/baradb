@@ -9,8 +9,13 @@ import (
 
 // Indexer Abstract interface of an indexer
 type Indexer interface {
+	// Put stores location of the corresponding data of the key in the indexer
 	Put(key []byte, position *data.LogRecordPosition) bool
+
+	// Get gets the location of the corresponding data af the key in the indexer
 	Get(key []byte) *data.LogRecordPosition
+
+	// Delete deletes the location of the corresponding data of the key in the indexer
 	Delete(key []byte) bool
 }
 
@@ -27,7 +32,7 @@ func (x *Item) Less(y btree.Item) bool {
 type IndexerType = int8
 
 const (
-	Btree  IndexerType = iota + 1 // Btree BTree indexer
+	Btree  IndexerType = iota + 1 // Btree B Tree indexer
 	ARtree                        // ARtree Adaptive Radix Tree indexer
 )
 

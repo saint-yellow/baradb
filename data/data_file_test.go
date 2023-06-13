@@ -27,12 +27,10 @@ func TestOpenDataFile(t *testing.T) {
 
 func TestDataFile_Write(t *testing.T) {
 	file, _ := OpenDataFile(tempDir, 114)
-	n, err := file.Write([]byte("114"))
+	err := file.Write([]byte("114"))
 	assert.Nil(t, err)
-	assert.Equal(t, 3, n)
-	n, err = file.Write([]byte("winter flower"))
+	err = file.Write([]byte("winter flower"))
 	assert.Nil(t, err)
-	assert.Equal(t, 13, n)
 }
 
 func TestDataFile_Close(t *testing.T) {
