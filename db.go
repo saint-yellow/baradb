@@ -95,6 +95,7 @@ func (db *DB) Get(key []byte) ([]byte, error) {
 		return nil, ErrKeyNotFound
 	}
 
+	// Confirm which data file the key is stored in
 	var dataFile *data.DataFile
 	if position.FileID == db.activeFile.FileID {
 		dataFile = db.activeFile
@@ -168,7 +169,8 @@ func (db *DB) appendLogRecord(lr *data.LogRecord) (*data.LogRecordPosition, erro
 		}
 	}
 
-	if _, err := db.activeFile.Write(encodedRecord); err != nil {
+	writeOffset := db.activeFile.WriteOffset
+	if err := db.activeFile.Write(encodedRecord); err != nil {
 		return nil, err
 	}
 
@@ -178,7 +180,7 @@ func (db *DB) appendLogRecord(lr *data.LogRecord) (*data.LogRecordPosition, erro
 		}
 	}
 
-	position := &data.LogRecordPosition{FileID: db.activeFile.FileID, Offset: db.activeFile.WriteOffset}
+	position := &data.LogRecordPosition{FileID: db.activeFile.FileID, Offset: writeOffset}
 	return position, nil
 }
 
