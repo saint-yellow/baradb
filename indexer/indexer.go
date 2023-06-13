@@ -17,18 +17,22 @@ type Indexer interface {
 
 	// Delete deletes the location of the corresponding data of the key in the indexer
 	Delete(key []byte) bool
+
+	// Iterator returns an iterator
+	Iterator(reverse bool) Iterator
 }
 
 // Item
 type Item struct {
-	key      []byte
-	position *data.LogRecordPosition
+	Key      []byte
+	Position *data.LogRecordPosition
 }
 
 func (x *Item) Less(y btree.Item) bool {
-	return bytes.Compare(x.key, y.(*Item).key) == -1
+	return bytes.Compare(x.Key, y.(*Item).Key) == -1
 }
 
+// IndexerType enum
 type IndexerType = int8
 
 const (
