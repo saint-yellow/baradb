@@ -28,12 +28,12 @@ func OpenDataFile(directory string, fileID uint32) (*DataFile, error) {
 		return nil, err
 	}
 
-	dataFile := &DataFile{
+	file := &DataFile{
 		FileID:      fileID,
 		WriteOffset: 0,
 		IOHandler:   ioHandler,
 	}
-	return dataFile, nil
+	return file, nil
 }
 
 // ReadLogRecord Read single log record by given offset in a data file
@@ -96,8 +96,13 @@ func (df *DataFile) Sync() error {
 	return df.IOHandler.Sync()
 }
 
-func (df *DataFile) Write(data []byte) (int, error) {
-	return df.IOHandler.Write(data)
+func (df *DataFile) Write(data []byte) error {
+	n, err := df.IOHandler.Write(data)
+	if err != nil {
+		return err
+	}
+	df.WriteOffset += int64(n)
+	return nil
 }
 
 func (df *DataFile) Close() error {
