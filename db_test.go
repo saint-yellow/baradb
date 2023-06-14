@@ -26,7 +26,7 @@ func destroyDB(db *DB) {
 }
 
 func TestDB_Launch(t *testing.T) {
-	db, err := LaunchDB(DefaultOptions)
+	db, err := LaunchDB(DefaultDBOptions)
 	defer destroyDB(db)
 
 	// Launch a DB engine with no any data file
@@ -60,7 +60,7 @@ func TestDB_Launch(t *testing.T) {
 
 	// Relaunch the DB engine to test its all data files
 	db.activeFile.Close()
-	db, err = LaunchDB(DefaultOptions)
+	db, err = LaunchDB(DefaultDBOptions)
 	assert.Nil(t, err)
 	assert.NotNil(t, db)
 	assert.DirExists(t, db.options.Directory)
@@ -69,14 +69,14 @@ func TestDB_Launch(t *testing.T) {
 }
 
 func TestDB_Put(t *testing.T) {
-	db, _ := LaunchDB(DefaultOptions)
+	db, _ := LaunchDB(DefaultDBOptions)
 	defer destroyDB(db)
 	err := db.Put([]byte("114"), []byte("514"))
 	assert.Nil(t, err)
 }
 
 func TestDB_Get(t *testing.T) {
-	db, _ := LaunchDB(DefaultOptions)
+	db, _ := LaunchDB(DefaultDBOptions)
 	defer destroyDB(db)
 
 	// Use a nil key
@@ -127,14 +127,14 @@ func TestDB_Get(t *testing.T) {
 
 	// Relaunch the DB engine and a stored value
 	db.activeFile.Close()
-	db, _ = LaunchDB(DefaultOptions)
+	db, _ = LaunchDB(DefaultDBOptions)
 	b, err = db.Get([]byte("1919"))
 	assert.Nil(t, err)
 	assert.Equal(t, "810", string(b))
 }
 
 func TestDB_Delete(t *testing.T) {
-	db, _ := LaunchDB(DefaultOptions)
+	db, _ := LaunchDB(DefaultDBOptions)
 	defer destroyDB(db)
 
 	var err error
@@ -162,7 +162,7 @@ func TestDB_Delete(t *testing.T) {
 
 	// Relaunch the DB engine and check the exist key
 	db.activeFile.Close()
-	db, _ = LaunchDB(DefaultOptions)
+	db, _ = LaunchDB(DefaultDBOptions)
 	b, err = db.Get([]byte("114"))
 	assert.Nil(t, err)
 	assert.Equal(t, "114514", string(b))
@@ -174,7 +174,7 @@ func TestDB_Delete(t *testing.T) {
 }
 
 func TestDB_NewIterator(t *testing.T) {
-	db, _ := LaunchDB(DefaultOptions)
+	db, _ := LaunchDB(DefaultDBOptions)
 	defer destroyDB(db)
 
 	// The DB engine has no key
@@ -263,7 +263,7 @@ func TestDB_NewIterator(t *testing.T) {
 }
 
 func TestDB_ListKeys(t *testing.T) {
-	db, _ := LaunchDB(DefaultOptions)
+	db, _ := LaunchDB(DefaultDBOptions)
 	defer destroyDB(db)
 
 	var keys [][]byte
@@ -297,7 +297,7 @@ func TestDB_ListKeys(t *testing.T) {
 }
 
 func TestDB_Fold(t *testing.T) {
-	db, _ := LaunchDB(DefaultOptions)
+	db, _ := LaunchDB(DefaultDBOptions)
 	defer destroyDB(db)
 
 	var err error
@@ -318,7 +318,7 @@ func TestDB_Fold(t *testing.T) {
 }
 
 func TestDB_Close(t *testing.T) {
-	db, _ := LaunchDB(DefaultOptions)
+	db, _ := LaunchDB(DefaultDBOptions)
 	defer destroyDB(db)
 
 	var err error
@@ -330,7 +330,7 @@ func TestDB_Close(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Relaunch the DB engine
-	db, _ = LaunchDB(DefaultOptions)
+	db, _ = LaunchDB(DefaultDBOptions)
 	assert.Nil(t, db.activeFile)
 	assert.Zero(t, len(db.inactiveFiles))
 
@@ -342,7 +342,7 @@ func TestDB_Close(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Relaunch the DB engine
-	db, _ = LaunchDB(DefaultOptions)
+	db, _ = LaunchDB(DefaultDBOptions)
 	assert.Zero(t, db.activeFile.FileID)
 	assert.Zero(t, len(db.inactiveFiles))
 
@@ -356,13 +356,13 @@ func TestDB_Close(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Relaunch the DB engine
-	db, _ = LaunchDB(DefaultOptions)
+	db, _ = LaunchDB(DefaultDBOptions)
 	assert.Positive(t, db.activeFile.FileID)
 	assert.Positive(t, len(db.inactiveFiles))
 }
 
 func TestDB_Sync(t *testing.T) {
-	db, _ := LaunchDB(DefaultOptions)
+	db, _ := LaunchDB(DefaultDBOptions)
 	defer destroyDB(db)
 
 	var err error
@@ -375,7 +375,7 @@ func TestDB_Sync(t *testing.T) {
 
 	// Relaunch the DB engine
 	db.Close()
-	db, _ = LaunchDB(DefaultOptions)
+	db, _ = LaunchDB(DefaultDBOptions)
 	assert.Nil(t, db.activeFile)
 	assert.Zero(t, len(db.inactiveFiles))
 
@@ -388,7 +388,7 @@ func TestDB_Sync(t *testing.T) {
 
 	// Relaunch the DB engine
 	db.Close()
-	db, _ = LaunchDB(DefaultOptions)
+	db, _ = LaunchDB(DefaultDBOptions)
 	assert.Zero(t, db.activeFile.FileID)
 	assert.Zero(t, len(db.inactiveFiles))
 
@@ -403,7 +403,7 @@ func TestDB_Sync(t *testing.T) {
 
 	// Relaunch the DB engine
 	db.Close()
-	db, _ = LaunchDB(DefaultOptions)
+	db, _ = LaunchDB(DefaultDBOptions)
 	assert.Positive(t, db.activeFile.FileID)
 	assert.Positive(t, len(db.inactiveFiles))
 }

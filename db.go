@@ -15,7 +15,7 @@ import (
 // DB baradb engine instance
 type DB struct {
 	mu            *sync.RWMutex
-	options       Options
+	options       DBOptions
 	fileIDs       []int
 	activeFile    *data.DataFile
 	inactiveFiles map[uint32]*data.DataFile
@@ -23,9 +23,9 @@ type DB struct {
 }
 
 // LaunchDB launches a DB engine instance
-func LaunchDB(options Options) (*DB, error) {
+func LaunchDB(options DBOptions) (*DB, error) {
 	// make sure that options are validate
-	if err := checkOptions(options); err != nil {
+	if err := checkDBOptions(options); err != nil {
 		return nil, err
 	}
 
