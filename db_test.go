@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/saint-yellow/baradb/indexer"
 	"github.com/saint-yellow/baradb/utils"
 	"github.com/stretchr/testify/assert"
 )
@@ -12,10 +13,12 @@ import (
 // destroyDB a teardown method for clearing resources after testing
 func destroyDB(db *DB) {
 	if db != nil {
-		if db.activeFile != nil {
-			db.activeFile.Close()
+		var err error
+		err = db.Close()
+		if err != nil {
+			panic(err)
 		}
-		err := os.RemoveAll(db.options.Directory)
+		err = os.RemoveAll(db.options.Directory)
 		if err != nil {
 			panic(err)
 		}
@@ -168,4 +171,239 @@ func TestDB_Delete(t *testing.T) {
 	b, err = db.Get([]byte("114"))
 	assert.Equal(t, ErrKeyNotFound, err)
 	assert.Nil(t, b)
+}
+
+func TestDB_NewIterator(t *testing.T) {
+	db, _ := LaunchDB(DefaultOptions)
+	defer destroyDB(db)
+
+	// The DB engine has no key
+	iter1 := db.NewItrerator(indexer.DefaultIteratorOptions)
+	assert.NotNil(t, iter1)
+	assert.False(t, iter1.Valid())
+
+	// The DB engine has one key
+	db.Put([]byte("114"), []byte("514"))
+	iter2 := db.NewItrerator(indexer.DefaultIteratorOptions)
+	assert.NotNil(t, iter2)
+	assert.True(t, iter2.Valid())
+	assert.Equal(t, "114", string(iter2.Key()))
+	b, err := iter2.Value()
+	assert.Nil(t, err)
+	assert.Equal(t, "514", string(b))
+	db.Delete([]byte("114"))
+
+	// The DB engine has more keys
+	keysCount := 20
+	for i := 1; i <= keysCount; i++ {
+		db.Put([]byte(fmt.Sprintf("%02d", i)), utils.RandonValue(10))
+	}
+
+	// Forward iteration
+	iter3 := db.NewItrerator(indexer.DefaultIteratorOptions)
+	assert.NotNil(t, iter3)
+	assert.True(t, iter3.Valid())
+	var index int = 1
+	for iter3.Rewind(); iter3.Valid(); iter3.Next() {
+		assert.Equal(t, fmt.Sprintf("%02d", index), string(iter3.Key()))
+		b, err = iter3.Value()
+		assert.Nil(t, err)
+		assert.NotNil(t, b)
+		if index < keysCount {
+			index++
+		}
+	}
+
+	// Forward seek
+	iter3.Rewind()
+	index = 10
+	for iter3.Seek([]byte(fmt.Sprintf("%02d", index))); iter3.Valid(); iter3.Next() {
+		assert.Equal(t, fmt.Sprintf("%02d", index), string(iter3.Key()))
+		b, err = iter3.Value()
+		assert.Nil(t, err)
+		assert.NotNil(t, b)
+		index++
+	}
+
+	// Reversed iteration
+	opts := indexer.DefaultIteratorOptions
+	opts.Reverse = true
+	iter4 := db.NewItrerator(opts)
+	index = keysCount
+	for iter4.Rewind(); iter4.Valid(); iter4.Next() {
+		assert.Equal(t, fmt.Sprintf("%02d", index), string(iter4.Key()))
+		b, err = iter4.Value()
+		assert.Nil(t, err)
+		assert.NotNil(t, b)
+		index--
+	}
+
+	// Reversed seek
+	iter4.Rewind()
+	index = 5
+	for iter4.Seek([]byte("05")); iter4.Valid(); iter4.Next() {
+		assert.Equal(t, fmt.Sprintf("%02d", index), string(iter4.Key()))
+		b, err = iter4.Value()
+		assert.Nil(t, err)
+		assert.NotNil(t, b)
+		index--
+	}
+
+	// Specify a prefix
+	opts.Prefix = []byte("1")
+	index = 19
+	iter5 := db.NewItrerator(opts)
+	for iter5.Rewind(); iter5.Valid(); iter5.Next() {
+		assert.Equal(t, fmt.Sprintf("%02d", index), string(iter5.Key()))
+		b, err = iter5.Value()
+		assert.Nil(t, err)
+		assert.NotNil(t, b)
+		index--
+	}
+}
+
+func TestDB_ListKeys(t *testing.T) {
+	db, _ := LaunchDB(DefaultOptions)
+	defer destroyDB(db)
+
+	var keys [][]byte
+
+	// The DB engine has no key
+	keys = db.ListKeys()
+	assert.Equal(t, 0, len(keys))
+
+	// The DB engine has one key
+	db.Put([]byte("114"), []byte("514"))
+	keys = db.ListKeys()
+	assert.Equal(t, 1, len(keys))
+
+	// The DB engine deletes the only Key
+	db.Delete([]byte("114"))
+	keys = db.ListKeys()
+	assert.Equal(t, 0, len(keys))
+
+	// The DB engine has more than one key
+	keysCount := 20
+	for i := 11; i <= 30; i++ {
+		db.Put([]byte(fmt.Sprintf("%02d", i)), utils.RandonValue(8))
+	}
+	keys = db.ListKeys()
+	assert.Equal(t, keysCount, len(keys))
+	var index int = 11
+	for _, key := range keys {
+		assert.Equal(t, fmt.Sprintf("%02d", index), string(key))
+		index++
+	}
+}
+
+func TestDB_Fold(t *testing.T) {
+	db, _ := LaunchDB(DefaultOptions)
+	defer destroyDB(db)
+
+	var err error
+
+	// Put some data
+	for i := 11; i <= 30; i++ {
+		db.Put([]byte(fmt.Sprintf("%02d", i)), utils.RandonValue(8))
+	}
+
+	// Execure an uder-defined function
+	udf := func(key, value []byte) bool {
+		assert.NotNil(t, key)
+		assert.NotNil(t, value)
+		return true
+	}
+	err = db.Fold(udf)
+	assert.Nil(t, err)
+}
+
+func TestDB_Close(t *testing.T) {
+	db, _ := LaunchDB(DefaultOptions)
+	defer destroyDB(db)
+
+	var err error
+
+	// The DB engine has no data file
+	assert.Nil(t, db.activeFile)
+	assert.Zero(t, len(db.inactiveFiles))
+	err = db.Close()
+	assert.Nil(t, err)
+
+	// Relaunch the DB engine
+	db, _ = LaunchDB(DefaultOptions)
+	assert.Nil(t, db.activeFile)
+	assert.Zero(t, len(db.inactiveFiles))
+
+	// The DB engine only has the active data file
+	db.Put(utils.RandomKey(1), utils.RandonValue(32))
+	assert.Zero(t, db.activeFile.FileID)
+	assert.Zero(t, len(db.inactiveFiles))
+	err = db.Close()
+	assert.Nil(t, err)
+
+	// Relaunch the DB engine
+	db, _ = LaunchDB(DefaultOptions)
+	assert.Zero(t, db.activeFile.FileID)
+	assert.Zero(t, len(db.inactiveFiles))
+
+	// The DB engine has an active data file and at least one inactive data file
+	for i := 100; i <= 100000; i++ {
+		db.Put(utils.RandomKey(i), utils.RandonValue(32))
+	}
+	assert.Positive(t, db.activeFile.FileID)
+	assert.Positive(t, len(db.inactiveFiles))
+	err = db.Close()
+	assert.Nil(t, err)
+
+	// Relaunch the DB engine
+	db, _ = LaunchDB(DefaultOptions)
+	assert.Positive(t, db.activeFile.FileID)
+	assert.Positive(t, len(db.inactiveFiles))
+}
+
+func TestDB_Sync(t *testing.T) {
+	db, _ := LaunchDB(DefaultOptions)
+	defer destroyDB(db)
+
+	var err error
+
+	// The DB engine has no data file
+	assert.Nil(t, db.activeFile)
+	assert.Zero(t, len(db.inactiveFiles))
+	err = db.Sync()
+	assert.Nil(t, err)
+
+	// Relaunch the DB engine
+	db.Close()
+	db, _ = LaunchDB(DefaultOptions)
+	assert.Nil(t, db.activeFile)
+	assert.Zero(t, len(db.inactiveFiles))
+
+	// The DB engine only has the active data file
+	db.Put(utils.RandomKey(1), utils.RandonValue(32))
+	assert.Zero(t, db.activeFile.FileID)
+	assert.Zero(t, len(db.inactiveFiles))
+	err = db.Sync()
+	assert.Nil(t, err)
+
+	// Relaunch the DB engine
+	db.Close()
+	db, _ = LaunchDB(DefaultOptions)
+	assert.Zero(t, db.activeFile.FileID)
+	assert.Zero(t, len(db.inactiveFiles))
+
+	// The DB engine has an active data file and at least one inactive data file
+	for i := 100; i <= 100000; i++ {
+		db.Put(utils.RandomKey(i), utils.RandonValue(32))
+	}
+	assert.Positive(t, db.activeFile.FileID)
+	assert.Positive(t, len(db.inactiveFiles))
+	err = db.Sync()
+	assert.Nil(t, err)
+
+	// Relaunch the DB engine
+	db.Close()
+	db, _ = LaunchDB(DefaultOptions)
+	assert.Positive(t, db.activeFile.FileID)
+	assert.Positive(t, len(db.inactiveFiles))
 }

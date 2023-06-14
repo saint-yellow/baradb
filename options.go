@@ -26,7 +26,7 @@ func checkOptions(options Options) error {
 // DefaultOptions Default options for launching DB engine
 var DefaultOptions = Options{
 	Directory:       "/tmp/baradb",
-	MaxDataFileSize: 1 * 1024 * 1024, // 4MB
+	MaxDataFileSize: 1 * 1024 * 1024,
 	WriteSync:       false,
 	IndexerType:     indexer.Btree,
 }

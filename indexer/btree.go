@@ -45,6 +45,11 @@ func (bt *BTree) Get(key []byte) *data.LogRecordPosition {
 	return y.(*Item).Position
 }
 
+// Size returns how many key/value pairs in the BTree
+func (bt *BTree) Size() int {
+	return bt.tree.Len()
+}
+
 // Delete data from BTree
 func (bt *BTree) Delete(key []byte) bool {
 	x := &Item{

@@ -95,18 +95,24 @@ func (db *DB) Get(key []byte) ([]byte, error) {
 		return nil, ErrKeyNotFound
 	}
 
-	// Confirm which data file the key is stored in
-	var dataFile *data.DataFile
-	if position.FileID == db.activeFile.FileID {
-		dataFile = db.activeFile
+	// Get value from a data file
+	return db.getValueByPosition(position)
+}
+
+// getValueByPosition gets corresponding value by given position
+func (db *DB) getValueByPosition(lrp *data.LogRecordPosition) ([]byte, error) {
+	// Confirm which data file the keys is stored in
+	var file *data.DataFile
+	if lrp.FileID == db.activeFile.FileID {
+		file = db.activeFile
 	} else {
-		dataFile = db.inactiveFiles[position.FileID]
+		file = db.inactiveFiles[lrp.FileID]
 	}
-	if dataFile == nil {
+	if file == nil {
 		return nil, ErrFileNotFound
 	}
 
-	lr, _, err := dataFile.ReadLogRecord(position.Offset)
+	lr, _, err := file.ReadLogRecord(lrp.Offset)
 	if err != nil {
 		return nil, nil
 	}
@@ -283,4 +289,95 @@ func (db *DB) loadIndex() error {
 	}
 
 	return nil
+}
+
+// NewItrerator initializes an iterator of DB engine
+func (db *DB) NewItrerator(options indexer.IteratorOptions) *Iterator {
+	iterator := &Iterator{
+		indexIterator: db.indexer.Iterator(options.Reverse),
+		db:            db,
+		options:       options,
+	}
+
+	return iterator
+}
+
+// ListKeys gets all keys in the DB engine
+func (db *DB) ListKeys() [][]byte {
+	iter := db.indexer.Iterator(false)
+	keys := make([][]byte, db.indexer.Size())
+
+	var index int = 0
+	for iter.Rewind(); iter.Valid(); iter.Next() {
+		keys[index] = iter.Key()
+		index++
+	}
+
+	return keys
+}
+
+// userOperationFunc User-defined function
+type userOperationFunc = func(key, value []byte) bool
+
+// Fold retrieves all the data and iteratively executes an user-specified operation (UDF)
+// Once the UDF failed, the iteration will stop intermediatelly
+func (db *DB) Fold(fn userOperationFunc) error {
+	db.mu.RLock()
+	defer db.mu.RUnlock()
+
+	iter := db.indexer.Iterator(false)
+	for iter.Rewind(); iter.Valid(); iter.Next() {
+		value, err := db.getValueByPosition(iter.Value())
+		if err != nil {
+			return err
+		}
+
+		if ok := fn(iter.Key(), value); !ok {
+			break
+		}
+	}
+
+	return nil
+}
+
+// Close closes the DB engine
+func (db *DB) Close() error {
+	if db.activeFile == nil {
+		return nil
+	}
+
+	db.mu.Lock()
+	defer db.mu.Unlock()
+
+	var err error
+
+	// Close the current active data file
+	err = db.activeFile.Close()
+	if err != nil {
+		return err
+	}
+
+	// Close all inactive data files
+	for _, file := range db.inactiveFiles {
+		err = file.Close()
+		if err != nil {
+			return nil
+		}
+	}
+
+	return nil
+}
+
+// Sync persistence of data in active data file of the DB engine
+func (db *DB) Sync() error {
+	if db.activeFile == nil {
+		return nil
+	}
+
+	db.mu.Lock()
+	defer db.mu.Unlock()
+
+	// The inactive data file was already been synced before
+	// So the current active data file is the only thing to handle
+	return db.activeFile.Sync()
 }

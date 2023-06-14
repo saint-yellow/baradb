@@ -18,6 +18,9 @@ type Indexer interface {
 	// Delete deletes the location of the corresponding data of the key in the indexer
 	Delete(key []byte) bool
 
+	// Size returns how many key/value pairs in the indexer
+	Size() int
+
 	// Iterator returns an iterator
 	Iterator(reverse bool) Iterator
 }
