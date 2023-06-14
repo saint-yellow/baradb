@@ -9,7 +9,7 @@ import (
 	"github.com/saint-yellow/baradb/io_handler"
 )
 
-const DataFileSuffix = ".data"
+const DataFileNameSuffix = ".data"
 
 // DataFile represents a data file in a baradb engine instance
 type DataFile struct {
@@ -20,7 +20,7 @@ type DataFile struct {
 
 // OpenDataFile open a data file
 func OpenDataFile(directory string, fileID uint32) (*DataFile, error) {
-	fileName := fmt.Sprintf("%09d%s", fileID, DataFileSuffix)
+	fileName := fmt.Sprintf("%09d%s", fileID, DataFileNameSuffix)
 	filePath := filepath.Join(directory, fileName)
 
 	ioHandler, err := io_handler.NewIOHandler(io_handler.FileIOHandler, filePath)
