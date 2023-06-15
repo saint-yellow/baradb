@@ -24,7 +24,7 @@ type DB struct {
 
 // LaunchDB launches a DB engine instance
 func LaunchDB(options DBOptions) (*DB, error) {
-	// make sure that options are validate
+	// make sure that options are valid
 	if err := checkDBOptions(options); err != nil {
 		return nil, err
 	}
@@ -41,7 +41,7 @@ func LaunchDB(options DBOptions) (*DB, error) {
 		mu:            new(sync.RWMutex),
 		options:       options,
 		activeFile:    nil,
-		inactiveFiles: make(map[uint32]*data.DataFile, 0),
+		inactiveFiles: make(map[uint32]*data.DataFile),
 		indexer:       indexer.NewIndexer(options.IndexerType),
 	}
 
@@ -193,12 +193,12 @@ func (db *DB) appendLogRecord(lr *data.LogRecord) (*data.LogRecordPosition, erro
 // setActiveFile sets an active data file in DB
 // The caller must have a mutex lock before calling this function
 func (db *DB) setActiveFile() error {
-	var initialFileID uint32 = 0
+	var fileID uint32 = 0
 	if db.activeFile != nil {
-		initialFileID = db.activeFile.FileID + 1
+		fileID = db.activeFile.FileID + 1
 	}
 
-	file, err := data.OpenDataFile(db.options.Directory, initialFileID)
+	file, err := data.OpenDataFile(db.options.Directory, fileID)
 	if err != nil {
 		return err
 	}
@@ -206,7 +206,7 @@ func (db *DB) setActiveFile() error {
 	return nil
 }
 
-// loadDataFiles Load data files in the disk
+// loadDataFiles Load data files to the DB engine
 func (db *DB) loadDataFiles() error {
 	// Read the directory of the DB to get all the data files
 	entries, err := os.ReadDir(db.options.Directory)
@@ -214,10 +214,10 @@ func (db *DB) loadDataFiles() error {
 		return err
 	}
 
-	// Collect file ID from every single data file with a name like 00001.data
+	// Collect file ID from every single data file with a name like 000000001.data
 	var fileIDs []int
 	for _, entry := range entries {
-		if strings.HasSuffix(entry.Name(), data.DataFileSuffix) {
+		if strings.HasSuffix(entry.Name(), data.DataFileNameSuffix) {
 			splitParts := strings.Split(entry.Name(), ".")
 			fileID, err := strconv.Atoi(splitParts[0])
 			if err != nil {
@@ -232,16 +232,16 @@ func (db *DB) loadDataFiles() error {
 
 	// Open every single data file sequantially
 	for i, fileID := range fileIDs {
-		dataFile, err := data.OpenDataFile(db.options.Directory, uint32(fileID))
+		file, err := data.OpenDataFile(db.options.Directory, uint32(fileID))
 		if err != nil {
 			return err
 		}
 
 		// The last data file shoule be the current active one of the DB engine
 		if i == len(fileIDs)-1 {
-			db.activeFile = dataFile
+			db.activeFile = file
 		} else {
-			db.inactiveFiles[uint32(fileID)] = dataFile
+			db.inactiveFiles[uint32(fileID)] = file
 		}
 	}
 
@@ -274,10 +274,14 @@ func (db *DB) loadIndex() error {
 			}
 
 			lrp := &data.LogRecordPosition{FileID: fileID, Offset: offset}
+			var ok bool
 			if lr.Type == data.DeletedLogRecord {
-				db.indexer.Delete(lr.Key)
+				ok = db.indexer.Delete(lr.Key)
 			} else {
-				db.indexer.Put(lr.Key, lrp)
+				ok = db.indexer.Put(lr.Key, lrp)
+			}
+			if !ok {
+				return ErrIndexUpdateFailed
 			}
 
 			offset += n
@@ -342,6 +346,7 @@ func (db *DB) Fold(fn userOperationFunc) error {
 
 // Close closes the DB engine
 func (db *DB) Close() error {
+	// There is nothing to do if the DB engine has no data file
 	if db.activeFile == nil {
 		return nil
 	}
@@ -361,7 +366,7 @@ func (db *DB) Close() error {
 	for _, file := range db.inactiveFiles {
 		err = file.Close()
 		if err != nil {
-			return nil
+			return err
 		}
 	}
 
@@ -380,4 +385,15 @@ func (db *DB) Sync() error {
 	// The inactive data file was already been synced before
 	// So the current active data file is the only thing to handle
 	return db.activeFile.Sync()
+}
+
+// NewWriteBatch initializes a write batch in the DB engine
+func (db *DB) NewWriteBatch(options WriteBatchOptions) *WriteBatch {
+	wb := &WriteBatch{
+		mu:            new(sync.RWMutex),
+		db:            db,
+		options:       options,
+		pendingWrites: make(map[string]*data.LogRecord),
+	}
+	return wb
 }
