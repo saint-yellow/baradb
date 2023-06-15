@@ -13,12 +13,10 @@ import (
 // destroyDB a teardown method for clearing resources after testing
 func destroyDB(db *DB) {
 	if db != nil {
-		var err error
-		err = db.Close()
-		if err != nil {
-			panic(err)
+		if db.activeFile != nil {
+			db.Close()
 		}
-		err = os.RemoveAll(db.options.Directory)
+		err := os.RemoveAll(db.options.Directory)
 		if err != nil {
 			panic(err)
 		}
@@ -45,7 +43,6 @@ func TestDB_Launch(t *testing.T) {
 		db.Put(utils.RandomKey(i), utils.RandonValue(256))
 	}
 	assert.True(t, len(db.inactiveFiles) > 0)
-	t.Log(db.activeFile.FileID)
 	for i := range db.inactiveFiles {
 		file := db.inactiveFiles[i]
 		size, _ := file.IOHandler.Size()
@@ -59,7 +56,7 @@ func TestDB_Launch(t *testing.T) {
 		fmt.Sprintf("The size of active data file (ID: %d) is greater than the configured maximum size", db.activeFile.FileID))
 
 	// Relaunch the DB engine to test its all data files
-	db.activeFile.Close()
+	db.Close()
 	db, err = LaunchDB(DefaultDBOptions)
 	assert.Nil(t, err)
 	assert.NotNil(t, db)
@@ -126,7 +123,7 @@ func TestDB_Get(t *testing.T) {
 	assert.Equal(t, "810", string(b))
 
 	// Relaunch the DB engine and a stored value
-	db.activeFile.Close()
+	db.Close()
 	db, _ = LaunchDB(DefaultDBOptions)
 	b, err = db.Get([]byte("1919"))
 	assert.Nil(t, err)
@@ -161,7 +158,7 @@ func TestDB_Delete(t *testing.T) {
 	db.Put([]byte("114"), []byte("114514"))
 
 	// Relaunch the DB engine and check the exist key
-	db.activeFile.Close()
+	db.Close()
 	db, _ = LaunchDB(DefaultDBOptions)
 	b, err = db.Get([]byte("114"))
 	assert.Nil(t, err)
