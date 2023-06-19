@@ -14,12 +14,13 @@ import (
 
 // DB baradb engine instance
 type DB struct {
-	mu            *sync.RWMutex
-	options       DBOptions
-	fileIDs       []int
-	activeFile    *data.DataFile
-	inactiveFiles map[uint32]*data.DataFile
-	indexer       indexer.Indexer
+	mu            *sync.RWMutex             // Mutial exclusion lock
+	options       DBOptions                 // DB Options
+	fileIDs       []int                     // File IDs of all data files
+	activeFile    *data.DataFile            // Active data file, readable and writeable
+	inactiveFiles map[uint32]*data.DataFile // Inactive data files, readable but unwritable
+	indexer       indexer.Indexer           // In-memory indexer
+	tranNo        uint64                    // Globally increasing serial number of a transaction
 }
 
 // LaunchDB launches a DB engine instance
@@ -63,12 +64,12 @@ func (db *DB) Put(key, value []byte) error {
 	}
 
 	lr := &data.LogRecord{
-		Key:   key,
+		Key:   encodeLogRecordKeyWithTranNo(key, nonTranNo),
 		Value: value,
 		Type:  data.NormalLogRecord,
 	}
 
-	position, err := db.appendLogRecord(lr)
+	position, err := db.appendLogRecord(lr, true)
 	if err != nil {
 		return err
 	}
@@ -78,7 +79,6 @@ func (db *DB) Put(key, value []byte) error {
 	}
 
 	return nil
-
 }
 
 // Get Reads data from the DB engine by a given key
@@ -114,7 +114,7 @@ func (db *DB) getValueByPosition(lrp *data.LogRecordPosition) ([]byte, error) {
 
 	lr, _, err := file.ReadLogRecord(lrp.Offset)
 	if err != nil {
-		return nil, nil
+		return nil, err
 	}
 
 	if lr.Type == data.DeletedLogRecord {
@@ -136,11 +136,11 @@ func (db *DB) Delete(key []byte) error {
 	}
 
 	lr := &data.LogRecord{
-		Key:  key,
+		Key:  encodeLogRecordKeyWithTranNo(key, nonTranNo),
 		Type: data.DeletedLogRecord,
 	}
 
-	if _, err := db.appendLogRecord(lr); err != nil {
+	if _, err := db.appendLogRecord(lr, true); err != nil {
 		return err
 	}
 
@@ -152,9 +152,11 @@ func (db *DB) Delete(key []byte) error {
 }
 
 // appendLogRecord appends a log record to the current active data file in DB
-func (db *DB) appendLogRecord(lr *data.LogRecord) (*data.LogRecordPosition, error) {
-	db.mu.Lock()
-	defer db.mu.Unlock()
+func (db *DB) appendLogRecord(lr *data.LogRecord, needMutex bool) (*data.LogRecordPosition, error) {
+	if needMutex {
+		db.mu.Lock()
+		defer db.mu.Unlock()
+	}
 
 	if db.activeFile == nil {
 		if err := db.setActiveFile(); err != nil {
@@ -254,18 +256,36 @@ func (db *DB) loadIndex() error {
 		return nil
 	}
 
-	for i, fid := range db.fileIDs {
-		fileID := uint32(fid)
-		var dataFile *data.DataFile
-		if fileID == db.activeFile.FileID {
-			dataFile = db.activeFile
+	updateIndex := func(key []byte, lrt data.LogRecordType, lrp *data.LogRecordPosition) {
+		var ok bool
+
+		if lrt == data.DeletedLogRecord {
+			ok = db.indexer.Delete(key)
 		} else {
-			dataFile = db.inactiveFiles[fileID]
+			ok = db.indexer.Put(key, lrp)
+		}
+
+		if !ok {
+			panic(ErrIndexUpdateFailed)
+		}
+	}
+
+	transactionRecords := make(map[uint64][]*data.TransactionRecord)
+
+	currentTransNo := nonTranNo
+
+	for i, fid := range db.fileIDs {
+		var fileID = uint32(fid)
+		var file *data.DataFile
+		if fileID == db.activeFile.FileID {
+			file = db.activeFile
+		} else {
+			file = db.inactiveFiles[fileID]
 		}
 
 		var offset int64 = 0
 		for {
-			lr, n, err := dataFile.ReadLogRecord(offset)
+			lr, n, err := file.ReadLogRecord(offset)
 			if err != nil {
 				if err == io.EOF {
 					break
@@ -274,14 +294,33 @@ func (db *DB) loadIndex() error {
 			}
 
 			lrp := &data.LogRecordPosition{FileID: fileID, Offset: offset}
-			var ok bool
-			if lr.Type == data.DeletedLogRecord {
-				ok = db.indexer.Delete(lr.Key)
+
+			// Decode the key of the log record to get the real key and the transaction serial number
+			lrKey, tranNo := decodeLogRecordKeyWithTranNo(lr.Key)
+			if tranNo == nonTranNo {
+				// If transaction serial number is 0, then update the in-memory index directly
+				// Because it is not a transactional operation
+				updateIndex(lrKey, lr.Type, lrp)
 			} else {
-				ok = db.indexer.Put(lr.Key, lrp)
+				// Transactional operation
+				if lr.Type == data.TransactionFinishedLogRecord {
+					for _, tr := range transactionRecords[tranNo] {
+						updateIndex(tr.Log.Key, tr.Log.Type, tr.Position)
+					}
+					delete(transactionRecords, tranNo)
+				} else {
+					lr.Key = lrKey
+					tr := &data.TransactionRecord{
+						Log:      lr,
+						Position: lrp,
+					}
+					transactionRecords[tranNo] = append(transactionRecords[tranNo], tr)
+				}
 			}
-			if !ok {
-				return ErrIndexUpdateFailed
+
+			// Update transaction serial number
+			if tranNo > currentTransNo {
+				currentTransNo = tranNo
 			}
 
 			offset += n
@@ -291,6 +330,9 @@ func (db *DB) loadIndex() error {
 			db.activeFile.WriteOffset = offset
 		}
 	}
+
+	// Update the DB's transaction serial number
+	db.tranNo = currentTransNo
 
 	return nil
 }
@@ -346,13 +388,13 @@ func (db *DB) Fold(fn userOperationFunc) error {
 
 // Close closes the DB engine
 func (db *DB) Close() error {
+	db.mu.Lock()
+	defer db.mu.Unlock()
+
 	// There is nothing to do if the DB engine has no data file
 	if db.activeFile == nil {
 		return nil
 	}
-
-	db.mu.Lock()
-	defer db.mu.Unlock()
 
 	var err error
 

@@ -3,7 +3,7 @@ package baradb
 import "github.com/saint-yellow/baradb/indexer"
 
 // Options represents options of a DB engine instance
-type Options struct {
+type DBOptions struct {
 	Directory       string              // Directory of a DB engine instance where data files are stored in
 	MaxDataFileSize int64               // Maximum size of a every single data file (uint: Byte)
 	WriteSync       bool                // Indicates whether persist data after writing
@@ -11,7 +11,7 @@ type Options struct {
 }
 
 // checkOptions
-func checkOptions(options Options) error {
+func checkDBOptions(options DBOptions) error {
 	if options.Directory == "" {
 		return ErrDirectoryIsEmpty
 	}
@@ -23,10 +23,23 @@ func checkOptions(options Options) error {
 	return nil
 }
 
-// DefaultOptions Default options for launching DB engine
-var DefaultOptions = Options{
-	Directory:       "/tmp/baradb",
-	MaxDataFileSize: 1 * 1024 * 1024,
-	WriteSync:       false,
-	IndexerType:     indexer.Btree,
+// WriteBatchOptions options for batch writing
+type WriteBatchOptions struct {
+	MaxBatchNumber int  // Maximum amount of data in one batch
+	SyncWrites     bool // Sync data after writing if true
 }
+
+var (
+	// DefaultDBOptions Default options for launching DB engine
+	DefaultDBOptions = DBOptions{
+		Directory:       "/tmp/baradb",
+		MaxDataFileSize: 1 * 1024 * 1024,
+		WriteSync:       false,
+		IndexerType:     indexer.Btree,
+	}
+	// DefaultWriteBatchOptions Default options for batch writing
+	DefaultWriteBatchOptions = WriteBatchOptions{
+		MaxBatchNumber: 100,
+		SyncWrites:     true,
+	}
+)

@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	opts := baradb.DefaultOptions
+	opts := baradb.DefaultDBOptions
 	db, err := baradb.LaunchDB(opts)
 	if err != nil {
 		panic(err)

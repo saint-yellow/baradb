@@ -11,11 +11,13 @@ type LogRecordPosition struct {
 	Offset int64  // Offset of data in the file
 }
 
+// LogRecordType types of log records
 type LogRecordType = byte
 
 const (
-	NormalLogRecord  LogRecordType = iota + 1 // NormalLogRecord indicates that a log record is normal to read, update or delete
-	DeletedLogRecord                          // DeletedLogRecord indicates that a log record is deleted and unusable
+	NormalLogRecord              LogRecordType = iota + 1 // NormalLogRecord indicates that a log record is normal to read, update or delete
+	DeletedLogRecord                                      // DeletedLogRecord indicates that a log record is deleted and unusable
+	TransactionFinishedLogRecord                          // TransactionFinishedLogRecord indicates that a Transaction is finished
 )
 
 // maxLogRecordHeaderSize Maximum size of a header of a log record

@@ -7,9 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var (
-	tempDir string = os.TempDir()
-)
+var tempDir string = os.TempDir()
 
 func TestOpenDataFile(t *testing.T) {
 	file1, err := OpenDataFile(tempDir, 114)

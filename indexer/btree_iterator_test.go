@@ -28,7 +28,7 @@ func TestBTreeIterator_New(t *testing.T) {
 
 	// The indexe has more keys
 	for i := 1; i < 20; i++ {
-		bt1.Put(utils.RandomKey(i), &data.LogRecordPosition{FileID: 114, Offset: 114})
+		bt1.Put(utils.NewKey(i), &data.LogRecordPosition{FileID: 114, Offset: 114})
 	}
 	bti3 := bt1.Iterator(false)
 	for bti3.Rewind(); bti3.Valid(); bti3.Next() {
@@ -46,7 +46,7 @@ func TestBTreeIterator_New(t *testing.T) {
 func TestBTreeIterator_Seek(t *testing.T) {
 	bt1 := NewBTree()
 	for i := 1; i <= 10; i++ {
-		bt1.Put(utils.RandomKey(i), &data.LogRecordPosition{FileID: 114, Offset: 514})
+		bt1.Put(utils.NewKey(i), &data.LogRecordPosition{FileID: 114, Offset: 514})
 	}
 
 	bti1 := bt1.Iterator(false)

@@ -35,12 +35,12 @@ func TestDB_Launch(t *testing.T) {
 	assert.Equal(t, 0, len(db.inactiveFiles))
 
 	// Put a key/value pair to generate an active data file
-	db.Put(utils.RandomKey(0), utils.RandonValue(64))
+	db.Put(utils.NewKey(0), utils.NewRandomValue(64))
 	assert.NotNil(t, db.activeFile)
 
 	// Put many key/value pairs to generate inactive data files
 	for i := 1; i <= 10000; i++ {
-		db.Put(utils.RandomKey(i), utils.RandonValue(256))
+		db.Put(utils.NewKey(i), utils.NewRandomValue(256))
 	}
 	assert.True(t, len(db.inactiveFiles) > 0)
 	for i := range db.inactiveFiles {
@@ -68,8 +68,16 @@ func TestDB_Launch(t *testing.T) {
 func TestDB_Put(t *testing.T) {
 	db, _ := LaunchDB(DefaultDBOptions)
 	defer destroyDB(db)
+
 	err := db.Put([]byte("114"), []byte("514"))
 	assert.Nil(t, err)
+	val, _ := db.Get([]byte("114"))
+	assert.Equal(t, "514", string(val))
+
+	db.Close()
+	db, _ = LaunchDB(DefaultDBOptions)
+	val, _ = db.Get([]byte("114"))
+	assert.Equal(t, "514", string(val))
 }
 
 func TestDB_Get(t *testing.T) {
@@ -114,7 +122,7 @@ func TestDB_Get(t *testing.T) {
 
 	// Put many key/value pairs to generate inactive data inactiveFiles
 	for i := 1; i <= 10000; i++ {
-		db.Put(utils.RandomKey(i), utils.RandonValue(256))
+		db.Put(utils.NewKey(i), utils.NewRandomValue(256))
 	}
 
 	// Get a key/value pair in an inactive data file
@@ -193,7 +201,7 @@ func TestDB_NewIterator(t *testing.T) {
 	// The DB engine has more keys
 	keysCount := 20
 	for i := 1; i <= keysCount; i++ {
-		db.Put([]byte(fmt.Sprintf("%02d", i)), utils.RandonValue(10))
+		db.Put([]byte(fmt.Sprintf("%02d", i)), utils.NewRandomValue(10))
 	}
 
 	// Forward iteration
@@ -282,7 +290,7 @@ func TestDB_ListKeys(t *testing.T) {
 	// The DB engine has more than one key
 	keysCount := 20
 	for i := 11; i <= 30; i++ {
-		db.Put([]byte(fmt.Sprintf("%02d", i)), utils.RandonValue(8))
+		db.Put([]byte(fmt.Sprintf("%02d", i)), utils.NewRandomValue(8))
 	}
 	keys = db.ListKeys()
 	assert.Equal(t, keysCount, len(keys))
@@ -301,7 +309,7 @@ func TestDB_Fold(t *testing.T) {
 
 	// Put some data
 	for i := 11; i <= 30; i++ {
-		db.Put([]byte(fmt.Sprintf("%02d", i)), utils.RandonValue(8))
+		db.Put([]byte(fmt.Sprintf("%02d", i)), utils.NewRandomValue(8))
 	}
 
 	// Execure an uder-defined function
@@ -332,7 +340,7 @@ func TestDB_Close(t *testing.T) {
 	assert.Zero(t, len(db.inactiveFiles))
 
 	// The DB engine only has the active data file
-	db.Put(utils.RandomKey(1), utils.RandonValue(32))
+	db.Put(utils.NewKey(1), utils.NewRandomValue(32))
 	assert.Zero(t, db.activeFile.FileID)
 	assert.Zero(t, len(db.inactiveFiles))
 	err = db.Close()
@@ -345,7 +353,7 @@ func TestDB_Close(t *testing.T) {
 
 	// The DB engine has an active data file and at least one inactive data file
 	for i := 100; i <= 100000; i++ {
-		db.Put(utils.RandomKey(i), utils.RandonValue(32))
+		db.Put(utils.NewKey(i), utils.NewRandomValue(32))
 	}
 	assert.Positive(t, db.activeFile.FileID)
 	assert.Positive(t, len(db.inactiveFiles))
@@ -377,7 +385,7 @@ func TestDB_Sync(t *testing.T) {
 	assert.Zero(t, len(db.inactiveFiles))
 
 	// The DB engine only has the active data file
-	db.Put(utils.RandomKey(1), utils.RandonValue(32))
+	db.Put(utils.NewKey(1), utils.NewRandomValue(32))
 	assert.Zero(t, db.activeFile.FileID)
 	assert.Zero(t, len(db.inactiveFiles))
 	err = db.Sync()
@@ -391,7 +399,7 @@ func TestDB_Sync(t *testing.T) {
 
 	// The DB engine has an active data file and at least one inactive data file
 	for i := 100; i <= 100000; i++ {
-		db.Put(utils.RandomKey(i), utils.RandonValue(32))
+		db.Put(utils.NewKey(i), utils.NewRandomValue(32))
 	}
 	assert.Positive(t, db.activeFile.FileID)
 	assert.Positive(t, len(db.inactiveFiles))
@@ -403,4 +411,47 @@ func TestDB_Sync(t *testing.T) {
 	db, _ = LaunchDB(DefaultDBOptions)
 	assert.Positive(t, db.activeFile.FileID)
 	assert.Positive(t, len(db.inactiveFiles))
+}
+
+func TestDB_NewWriteBatch(t *testing.T) {
+	db, _ := LaunchDB(DefaultDBOptions)
+	defer destroyDB(db)
+
+	var err error
+	var wb *WriteBatch
+
+	// Write data, no commit
+	wb = db.NewWriteBatch(DefaultWriteBatchOptions)
+	assert.NotNil(t, wb)
+	err = wb.Put([]byte("114"), []byte("514"))
+	assert.Nil(t, err)
+	err = wb.Delete([]byte("1919"))
+	assert.Nil(t, err)
+
+	// No data found in DB because of no commit
+	val, err := db.Get([]byte("114"))
+	assert.Equal(t, ErrKeyNotFound, err)
+	assert.Nil(t, val)
+
+	// Write and commit normally
+	err = wb.Commit()
+	assert.Nil(t, err)
+
+	// The DB has data
+	val, err = db.Get([]byte("114"))
+	assert.Nil(t, err)
+	assert.Equal(t, "514", string(val))
+
+	assert.Equal(t, 1, int(db.tranNo))
+
+	// Relaunch DB to get the same data
+	db.Close()
+	db, _ = LaunchDB(DefaultDBOptions)
+	val, err = db.Get(utils.NewKey(2))
+	assert.Equal(t, ErrKeyNotFound, err)
+	assert.Nil(t, val)
+
+	val, err = db.Get([]byte("114"))
+	assert.Nil(t, err)
+	assert.Equal(t, "514", string(val))
 }

@@ -1,7 +1,10 @@
 package io_handler
 
-import "io/fs"
+import (
+	"io/fs"
+)
 
+// DataFilePermission permission of every single data file
 const DataFilePermission fs.FileMode = 0644
 
 // IOHandler Abstract I/O interface

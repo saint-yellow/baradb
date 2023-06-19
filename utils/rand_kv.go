@@ -13,13 +13,13 @@ var (
 	valueTemplate = "baradb-value-%s"
 )
 
-// RandomKey generates a random key for testing
-func RandomKey(n int) []byte {
+// NewKey generates a random key for testing
+func NewKey(n int) []byte {
 	return []byte(fmt.Sprintf(keyTemplate, n))
 }
 
-// RandonValue generates a random value for testing
-func RandonValue(n int) []byte {
+// NewRandomValue generates a random value for testing
+func NewRandomValue(n int) []byte {
 	b := make([]byte, n)
 	for i := range b {
 		b[i] = letters[randSeed.Intn(len(letters))]

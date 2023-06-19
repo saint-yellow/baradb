@@ -2,6 +2,7 @@ package baradb
 
 import "errors"
 
+// User-defined errors
 var (
 	ErrKeyIsEmpty                = errors.New("The key is empty")
 	ErrIndexUpdateFailed         = errors.New("Failed to update index")
@@ -10,4 +11,5 @@ var (
 	ErrDirectoryIsEmpty          = errors.New("Data path is empty")
 	ErrMaxDataFileSizeIsNegative = errors.New("The maximum size of data file is negative")
 	ErrDirectoryCorrupted        = errors.New("Maybe the directory of the DB is corrupted")
+	ErrExceedMaxBatchNumber      = errors.New("Exceed the maximum batch number")
 )
