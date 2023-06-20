@@ -134,3 +134,25 @@ func (lr *LogRecord) crc(header []byte) uint32 {
 
 	return crc
 }
+
+// EncodeLogRecordPosition encodes a LogRecordPosition into a byte array
+func EncodeLogRecordPosition(lrp *LogRecordPosition) []byte {
+	buffer := make([]byte, binary.MaxVarintLen32+binary.MaxVarintLen64)
+	var index int = 0
+	index += binary.PutVarint(buffer[index:], int64(lrp.FileID))
+	index += binary.PutVarint(buffer[index:], lrp.Offset)
+	return buffer[:index]
+}
+
+// DecodeLogRecordPosition decodes a byte array into a DecodeLogRecordPosition
+func DecodeLogRecordPosition(buffer []byte) *LogRecordPosition {
+	var index int = 0
+	fileID, n := binary.Varint(buffer[index:])
+	index += n
+	offset, _ := binary.Varint(buffer[index:])
+	lrp := &LogRecordPosition{
+		FileID: uint32(fileID),
+		Offset: offset,
+	}
+	return lrp
+}

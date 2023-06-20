@@ -12,4 +12,5 @@ var (
 	ErrMaxDataFileSizeIsNegative = errors.New("The maximum size of data file is negative")
 	ErrDirectoryCorrupted        = errors.New("Maybe the directory of the DB is corrupted")
 	ErrExceedMaxBatchNumber      = errors.New("Exceed the maximum batch number")
+	ErrMergenceIsInProgress      = errors.New("Mergence is in progress, try again later")
 )

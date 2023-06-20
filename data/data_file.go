@@ -9,7 +9,11 @@ import (
 	"github.com/saint-yellow/baradb/io_handler"
 )
 
-const DataFileNameSuffix = ".data"
+const (
+	DataFileNameSuffix = ".data"
+	HintFileName       = "hint-index"
+	MergedFileName     = "merged"
+)
 
 // DataFile represents a data file in a baradb engine instance
 type DataFile struct {
@@ -18,16 +22,12 @@ type DataFile struct {
 	IOHandler   io_handler.IOHandler // IOHandler is used to handle I/O operations in a data file
 }
 
-// OpenDataFile open a data file
-func OpenDataFile(directory string, fileID uint32) (*DataFile, error) {
-	fileName := fmt.Sprintf("%09d%s", fileID, DataFileNameSuffix)
-	filePath := filepath.Join(directory, fileName)
-
-	ioHandler, err := io_handler.NewIOHandler(io_handler.FileIOHandler, filePath)
+// newDataFile constructs a data file
+func newDataFile(fileaPath string, fileID uint32) (*DataFile, error) {
+	ioHandler, err := io_handler.NewIOHandler(io_handler.FileIOHandler, fileaPath)
 	if err != nil {
 		return nil, err
 	}
-
 	file := &DataFile{
 		FileID:      fileID,
 		WriteOffset: 0,
@@ -36,7 +36,31 @@ func OpenDataFile(directory string, fileID uint32) (*DataFile, error) {
 	return file, nil
 }
 
-// ReadLogRecord Read single log record by given offset in a data file
+func GetDataFilePath(directory string, fileID uint32) string {
+	fileName := fmt.Sprintf("%09d%s", fileID, DataFileNameSuffix)
+	filePath := filepath.Join(directory, fileName)
+	return filePath
+}
+
+// OpenDataFile opens a data file
+func OpenDataFile(directory string, fileID uint32) (*DataFile, error) {
+	filePath := GetDataFilePath(directory, fileID)
+	return newDataFile(filePath, fileID)
+}
+
+// OpenHintFile opens a hint file
+func OpenHintFile(directory string) (*DataFile, error) {
+	filePath := filepath.Join(directory, HintFileName)
+	return newDataFile(filePath, 0)
+}
+
+// OpenMergedFile opens a merged file
+func OpenMergedFile(directory string) (*DataFile, error) {
+	filePath := filepath.Join(directory, MergedFileName)
+	return newDataFile(filePath, 0)
+}
+
+// ReadLogRecord reads single log record by given offset in a data file
 func (df *DataFile) ReadLogRecord(offset int64) (*LogRecord, int64, error) {
 	// Get the size of the data file
 	fileSize, err := df.IOHandler.Size()
@@ -114,4 +138,14 @@ func (df *DataFile) readNBytes(n int64, offset int64) ([]byte, error) {
 	b := make([]byte, n)
 	_, err := df.IOHandler.Read(b, offset)
 	return b, err
+}
+
+// WriteHintRecord writes a LogRecordPosition to a hint file
+func WriteHintRecord(hintFile *DataFile, key []byte, lrp *LogRecordPosition) error {
+	lr := &LogRecord{
+		Key:   key,
+		Value: EncodeLogRecordPosition(lrp),
+	}
+	elr, _ := EncodeLogRecord(lr)
+	return hintFile.Write(elr)
 }

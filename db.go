@@ -3,6 +3,7 @@ package baradb
 import (
 	"io"
 	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -21,6 +22,7 @@ type DB struct {
 	inactiveFiles map[uint32]*data.DataFile // Inactive data files, readable but unwritable
 	indexer       indexer.Indexer           // In-memory indexer
 	tranNo        uint64                    // Globally increasing serial number of a transaction
+	isMerging     bool                      // Whether the DB is merging
 }
 
 // LaunchDB launches a DB engine instance
@@ -46,15 +48,28 @@ func LaunchDB(options DBOptions) (*DB, error) {
 		indexer:       indexer.NewIndexer(options.IndexerType),
 	}
 
+	if err := db.loadMergenceFiles(); err != nil {
+		return nil, err
+	}
+
 	if err := db.loadDataFiles(); err != nil {
 		return nil, err
 	}
 
-	if err := db.loadIndex(); err != nil {
+	if err := db.loadIndexFromHintFile(); err != nil {
+		return nil, err
+	}
+
+	if err := db.loadIndexFromDataFiles(); err != nil {
 		return nil, err
 	}
 
 	return db, nil
+}
+
+// Fork creates a new DB engine instance mainly for merging data
+func (db *DB) Fork(directory string) (*DB, error) {
+	return nil, nil
 }
 
 // Put Writes data to the DB engine
@@ -250,15 +265,24 @@ func (db *DB) loadDataFiles() error {
 	return nil
 }
 
-// loadIndex Build index from data files on the disk and load the built index to the memory
-func (db *DB) loadIndex() error {
+// loadIndexFromDataFiles Build index from data files on the disk and load the built index to the memory
+func (db *DB) loadIndexFromDataFiles() error {
 	if len(db.fileIDs) == 0 {
 		return nil
 	}
 
+	hasMerged, nonMergedFileID := false, uint32(0)
+	mergedFilePath := filepath.Join(db.options.Directory, data.MergedFileName)
+	if _, err := os.Stat(mergedFilePath); err == nil {
+		fileID, err := db.getNonMergedFileID(db.options.Directory)
+		if err != nil {
+			return err
+		}
+		hasMerged, nonMergedFileID = true, fileID
+	}
+
 	updateIndex := func(key []byte, lrt data.LogRecordType, lrp *data.LogRecordPosition) {
 		var ok bool
-
 		if lrt == data.DeletedLogRecord {
 			ok = db.indexer.Delete(key)
 		} else {
@@ -275,7 +299,10 @@ func (db *DB) loadIndex() error {
 	currentTransNo := nonTranNo
 
 	for i, fid := range db.fileIDs {
-		var fileID = uint32(fid)
+		fileID := uint32(fid)
+		if hasMerged && fileID < nonMergedFileID {
+			continue
+		}
 		var file *data.DataFile
 		if fileID == db.activeFile.FileID {
 			file = db.activeFile
@@ -334,6 +361,35 @@ func (db *DB) loadIndex() error {
 	// Update the DB's transaction serial number
 	db.tranNo = currentTransNo
 
+	return nil
+}
+
+// loadIndexFromHintFile loads index from a hint file
+func (db *DB) loadIndexFromHintFile() error {
+	filePath := filepath.Join(db.options.Directory, data.HintFileName)
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		return nil
+	}
+
+	file, err := data.OpenHintFile(db.options.Directory)
+	if err != nil {
+		return err
+	}
+
+	var offset int64 = 0
+	for {
+		lr, n, err := file.ReadLogRecord(offset)
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return err
+		}
+
+		lrp := data.DecodeLogRecordPosition(lr.Value)
+		db.indexer.Put(lr.Key, lrp)
+		offset += n
+	}
 	return nil
 }
 
