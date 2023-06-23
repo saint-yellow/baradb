@@ -4,6 +4,7 @@ import (
 	"bytes"
 
 	"github.com/google/btree"
+
 	"github.com/saint-yellow/baradb/data"
 )
 
@@ -23,6 +24,9 @@ type Indexer interface {
 
 	// Iterator returns an iterator
 	Iterator(reverse bool) Iterator
+
+	// Close closes the indexer
+	Close() error
 }
 
 // Item
@@ -41,15 +45,18 @@ type IndexerType = int8
 const (
 	Btree  IndexerType = iota + 1 // Btree B Tree indexer
 	ARtree                        // ARtree Adaptive Radix Tree indexer
+	BPtree                        // BPtree B+ Tree indexer
 )
 
 // NewIndexer A simple factory menthod for creating an indexer
-func NewIndexer(t IndexerType) Indexer {
+func NewIndexer(t IndexerType, d string, syncWrites bool) Indexer {
 	switch t {
 	case Btree:
 		return NewBTree()
 	case ARtree:
-		return nil
+		return NewARTree()
+	case BPtree:
+		return NewBPlusTree(d, syncWrites)
 	default:
 		panic("Unsupported index type")
 	}

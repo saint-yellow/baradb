@@ -13,16 +13,20 @@ import (
 	"github.com/saint-yellow/baradb/indexer"
 )
 
+const tranNoKey = "tran-no"
+
 // DB baradb engine instance
 type DB struct {
-	mu            *sync.RWMutex             // Mutial exclusion lock
-	options       DBOptions                 // DB Options
-	fileIDs       []int                     // File IDs of all data files
-	activeFile    *data.DataFile            // Active data file, readable and writeable
-	inactiveFiles map[uint32]*data.DataFile // Inactive data files, readable but unwritable
-	indexer       indexer.Indexer           // In-memory indexer
-	tranNo        uint64                    // Globally increasing serial number of a transaction
-	isMerging     bool                      // Whether the DB is merging
+	mu               *sync.RWMutex             // Mutial exclusion lock
+	options          DBOptions                 // DB Options
+	fileIDs          []int                     // File IDs of all data files
+	activeFile       *data.DataFile            // Active data file, readable and writeable
+	inactiveFiles    map[uint32]*data.DataFile // Inactive data files, readable but unwritable
+	indexer          indexer.Indexer           // In-memory indexer
+	tranNo           uint64                    // Globally increasing serial number of a transaction
+	isMerging        bool                      // Whether the DB is merging
+	tranNoFileExists bool                      // Whether a file about transaction serial number exists
+	isFirstLaunch    bool                      // Whether the DB engine is launched for the first time
 }
 
 // LaunchDB launches a DB engine instance
@@ -32,11 +36,21 @@ func LaunchDB(options DBOptions) (*DB, error) {
 		return nil, err
 	}
 
+	var isFirstLaunch bool
 	// make sure the existance of the directory in options
 	if _, err := os.Stat(options.Directory); os.IsNotExist(err) {
+		isFirstLaunch = true
 		if err := os.Mkdir(options.Directory, os.ModePerm); err != nil {
 			return nil, err
 		}
+	}
+
+	entries, err := os.ReadDir(options.Directory)
+	if err != nil {
+		return nil, err
+	}
+	if len(entries) == 0 {
+		isFirstLaunch = true
 	}
 
 	// initialize DB instance
@@ -45,7 +59,12 @@ func LaunchDB(options DBOptions) (*DB, error) {
 		options:       options,
 		activeFile:    nil,
 		inactiveFiles: make(map[uint32]*data.DataFile),
-		indexer:       indexer.NewIndexer(options.IndexerType),
+		indexer: indexer.NewIndexer(
+			options.IndexerType,
+			options.Directory,
+			options.SyncWrites,
+		),
+		isFirstLaunch: isFirstLaunch,
 	}
 
 	if err := db.loadMergenceFiles(); err != nil {
@@ -56,12 +75,29 @@ func LaunchDB(options DBOptions) (*DB, error) {
 		return nil, err
 	}
 
-	if err := db.loadIndexFromHintFile(); err != nil {
-		return nil, err
+	// If the DB engine uses B+ tree as its indexer, then it don't need to load index from files
+	if options.IndexerType != indexer.BPtree {
+		if err := db.loadIndexFromHintFile(); err != nil {
+			return nil, err
+		}
+
+		if err := db.loadIndexFromDataFiles(); err != nil {
+			return nil, err
+		}
 	}
 
-	if err := db.loadIndexFromDataFiles(); err != nil {
-		return nil, err
+	// Get a transaction serial number from file
+	if options.IndexerType == indexer.BPtree {
+		if err := db.loadTranNo(); err != nil {
+			return nil, err
+		}
+		if db.activeFile != nil {
+			size, err := db.activeFile.IOHandler.Size()
+			if err != nil {
+				return nil, err
+			}
+			db.activeFile.WriteOffset += size
+		}
 	}
 
 	return db, nil
@@ -69,7 +105,14 @@ func LaunchDB(options DBOptions) (*DB, error) {
 
 // Fork creates a new DB engine instance mainly for merging data
 func (db *DB) Fork(directory string) (*DB, error) {
-	return nil, nil
+	opts := db.options
+	opts.Directory = directory
+
+	if err := checkDBOptions(opts); err != nil {
+		return nil, err
+	}
+
+	return LaunchDB(opts)
 }
 
 // Put Writes data to the DB engine
@@ -105,13 +148,13 @@ func (db *DB) Get(key []byte) ([]byte, error) {
 		return nil, ErrKeyIsEmpty
 	}
 
-	position := db.indexer.Get(key)
-	if position == nil {
+	lrp := db.indexer.Get(key)
+	if lrp == nil {
 		return nil, ErrKeyNotFound
 	}
 
 	// Get value from a data file
-	return db.getValueByPosition(position)
+	return db.getValueByPosition(lrp)
 }
 
 // getValueByPosition gets corresponding value by given position
@@ -197,7 +240,7 @@ func (db *DB) appendLogRecord(lr *data.LogRecord, needMutex bool) (*data.LogReco
 		return nil, err
 	}
 
-	if db.options.WriteSync {
+	if db.options.SyncWrites {
 		if err := db.activeFile.Sync(); err != nil {
 			return nil, err
 		}
@@ -393,6 +436,34 @@ func (db *DB) loadIndexFromHintFile() error {
 	return nil
 }
 
+// loadTranNo Gets a transaction serial number from a file
+func (db *DB) loadTranNo() error {
+	filePath := filepath.Join(db.options.Directory, data.TranNoFileName)
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		return nil
+	}
+
+	file, err := data.OpenTranNoFile(db.options.Directory)
+	if err != nil {
+		return err
+	}
+
+	lr, _, err := file.ReadLogRecord(0)
+	if err != nil {
+		return err
+	}
+
+	tranNo, err := strconv.ParseUint(string(lr.Value), 10, 64)
+	if err != nil {
+		return err
+	}
+
+	db.tranNo = tranNo
+	db.tranNoFileExists = true
+
+	return os.Remove(filePath)
+}
+
 // NewItrerator initializes an iterator of DB engine
 func (db *DB) NewItrerator(options indexer.IteratorOptions) *Iterator {
 	iterator := &Iterator{
@@ -428,6 +499,7 @@ func (db *DB) Fold(fn userOperationFunc) error {
 	defer db.mu.RUnlock()
 
 	iter := db.indexer.Iterator(false)
+	defer iter.Close()
 	for iter.Rewind(); iter.Valid(); iter.Next() {
 		value, err := db.getValueByPosition(iter.Value())
 		if err != nil {
@@ -453,6 +525,30 @@ func (db *DB) Close() error {
 	}
 
 	var err error
+
+	err = db.indexer.Close()
+	if err != nil {
+		return err
+	}
+
+	// Save the current transaction serial numbers
+	file, err := data.OpenTranNoFile(db.options.Directory)
+	if err != nil {
+		return err
+	}
+	lr := &data.LogRecord{
+		Key:   []byte(tranNoKey),
+		Value: []byte(strconv.FormatUint(db.tranNo, 10)),
+	}
+	elr, _ := data.EncodeLogRecord(lr)
+	err = file.Write(elr)
+	if err != nil {
+		return err
+	}
+	err = file.Sync()
+	if err != nil {
+		return err
+	}
 
 	// Close the current active data file
 	err = db.activeFile.Close()
@@ -487,6 +583,10 @@ func (db *DB) Sync() error {
 
 // NewWriteBatch initializes a write batch in the DB engine
 func (db *DB) NewWriteBatch(options WriteBatchOptions) *WriteBatch {
+	if db.options.IndexerType == indexer.BPtree && !db.tranNoFileExists && !db.isFirstLaunch {
+		panic("Can not use a write batch since the tran-no file does not exist")
+	}
+
 	wb := &WriteBatch{
 		mu:            new(sync.RWMutex),
 		db:            db,

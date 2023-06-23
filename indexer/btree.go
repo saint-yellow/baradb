@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	"github.com/google/btree"
+
 	"github.com/saint-yellow/baradb/data"
 )
 
@@ -70,4 +71,8 @@ func (bt *BTree) Iterator(reverse bool) Iterator {
 	defer bt.lock.Unlock()
 
 	return NewBTreeIterator(bt.tree, reverse)
+}
+
+func (bt *BTree) Close() error {
+	return nil
 }

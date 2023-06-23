@@ -13,6 +13,7 @@ const (
 	DataFileNameSuffix = ".data"
 	HintFileName       = "hint-index"
 	MergedFileName     = "merged"
+	TranNoFileName     = "tran-no"
 )
 
 // DataFile represents a data file in a baradb engine instance
@@ -57,6 +58,12 @@ func OpenHintFile(directory string) (*DataFile, error) {
 // OpenMergedFile opens a merged file
 func OpenMergedFile(directory string) (*DataFile, error) {
 	filePath := filepath.Join(directory, MergedFileName)
+	return newDataFile(filePath, 0)
+}
+
+// OpenTranNoFile opens a file about a transaction serial number
+func OpenTranNoFile(directory string) (*DataFile, error) {
+	filePath := filepath.Join(directory, TranNoFileName)
 	return newDataFile(filePath, 0)
 }
 

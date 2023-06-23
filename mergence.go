@@ -80,11 +80,12 @@ func (db *DB) Merge() error {
 	// Launch a new DB engine for mergence
 	mergenceOptions := db.options
 	mergenceOptions.Directory = md
-	mergenceOptions.WriteSync = false
+	mergenceOptions.SyncWrites = false
 	tempDB, err := LaunchDB(mergenceOptions)
 	if err != nil {
 		return err
 	}
+	defer tempDB.Close()
 
 	// Open a hint file
 	hintFile, err := data.OpenHintFile(md)
@@ -176,6 +177,9 @@ func (db *DB) loadMergenceFiles() error {
 	for i, entry := range entries {
 		if entry.Name() == data.MergedFileName {
 			mergenceFinished = true
+		}
+		if entry.Name() == data.TranNoFileName {
+			continue
 		}
 		mergedFileNames[i] = entry.Name()
 	}

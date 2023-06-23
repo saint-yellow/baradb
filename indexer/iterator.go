@@ -1,6 +1,8 @@
 package indexer
 
-import "github.com/saint-yellow/baradb/data"
+import (
+	"github.com/saint-yellow/baradb/data"
+)
 
 // An abstract interator of an indexer
 type Iterator interface {

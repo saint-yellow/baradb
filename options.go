@@ -6,7 +6,7 @@ import "github.com/saint-yellow/baradb/indexer"
 type DBOptions struct {
 	Directory       string              // Directory of a DB engine instance where data files are stored in
 	MaxDataFileSize int64               // Maximum size of a every single data file (uint: Byte)
-	WriteSync       bool                // Indicates whether persist data after writing
+	SyncWrites      bool                // Indicates whether persist data after writing
 	IndexerType     indexer.IndexerType // Chooses an indexer (BTree/ART/...)
 }
 
@@ -34,8 +34,8 @@ var (
 	DefaultDBOptions = DBOptions{
 		Directory:       "/tmp/baradb",
 		MaxDataFileSize: 1 * 1024 * 1024,
-		WriteSync:       false,
-		IndexerType:     indexer.Btree,
+		SyncWrites:      false,
+		IndexerType:     indexer.BPtree,
 	}
 	// DefaultWriteBatchOptions Default options for batch writing
 	DefaultWriteBatchOptions = WriteBatchOptions{

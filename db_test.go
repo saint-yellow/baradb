@@ -5,9 +5,10 @@ import (
 	"os"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/saint-yellow/baradb/indexer"
 	"github.com/saint-yellow/baradb/utils"
-	"github.com/stretchr/testify/assert"
 )
 
 // destroyDB a teardown method for clearing resources after testing
@@ -46,14 +47,24 @@ func TestDB_Launch(t *testing.T) {
 	for i := range db.inactiveFiles {
 		file := db.inactiveFiles[i]
 		size, _ := file.IOHandler.Size()
-		assert.True(t,
+		assert.True(
+			t,
 			size <= db.options.MaxDataFileSize,
-			fmt.Sprintf("The size of inactive data file (ID: %d) is greater than the cofigured maximum size", i))
+			fmt.Sprintf(
+				"The size of inactive data file (ID: %d) is greater than the cofigured maximum size",
+				i,
+			),
+		)
 	}
 	size, _ := db.activeFile.IOHandler.Size()
-	assert.True(t,
+	assert.True(
+		t,
 		size <= db.options.MaxDataFileSize,
-		fmt.Sprintf("The size of active data file (ID: %d) is greater than the configured maximum size", db.activeFile.FileID))
+		fmt.Sprintf(
+			"The size of active data file (ID: %d) is greater than the configured maximum size",
+			db.activeFile.FileID,
+		),
+	)
 
 	// Relaunch the DB engine to test its all data files
 	db.Close()
@@ -184,12 +195,14 @@ func TestDB_NewIterator(t *testing.T) {
 
 	// The DB engine has no key
 	iter1 := db.NewItrerator(indexer.DefaultIteratorOptions)
+	defer iter1.Close()
 	assert.NotNil(t, iter1)
 	assert.False(t, iter1.Valid())
 
 	// The DB engine has one key
 	db.Put([]byte("114"), []byte("514"))
 	iter2 := db.NewItrerator(indexer.DefaultIteratorOptions)
+	defer iter2.Close()
 	assert.NotNil(t, iter2)
 	assert.True(t, iter2.Valid())
 	assert.Equal(t, "114", string(iter2.Key()))
@@ -206,6 +219,7 @@ func TestDB_NewIterator(t *testing.T) {
 
 	// Forward iteration
 	iter3 := db.NewItrerator(indexer.DefaultIteratorOptions)
+	defer iter3.Close()
 	assert.NotNil(t, iter3)
 	assert.True(t, iter3.Valid())
 	var index int = 1
@@ -234,6 +248,7 @@ func TestDB_NewIterator(t *testing.T) {
 	opts := indexer.DefaultIteratorOptions
 	opts.Reverse = true
 	iter4 := db.NewItrerator(opts)
+	defer iter4.Close()
 	index = keysCount
 	for iter4.Rewind(); iter4.Valid(); iter4.Next() {
 		assert.Equal(t, fmt.Sprintf("%02d", index), string(iter4.Key()))
@@ -258,6 +273,7 @@ func TestDB_NewIterator(t *testing.T) {
 	opts.Prefix = []byte("1")
 	index = 19
 	iter5 := db.NewItrerator(opts)
+	defer iter5.Close()
 	for iter5.Rewind(); iter5.Valid(); iter5.Next() {
 		assert.Equal(t, fmt.Sprintf("%02d", index), string(iter5.Key()))
 		b, err = iter5.Value()
