@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -46,7 +47,7 @@ func TestDB_Launch(t *testing.T) {
 	assert.True(t, len(db.inactiveFiles) > 0)
 	for i := range db.inactiveFiles {
 		file := db.inactiveFiles[i]
-		size, _ := file.IOHandler.Size()
+		size, _ := file.Size()
 		assert.True(
 			t,
 			size <= db.options.MaxDataFileSize,
@@ -56,7 +57,7 @@ func TestDB_Launch(t *testing.T) {
 			),
 		)
 	}
-	size, _ := db.activeFile.IOHandler.Size()
+	size, _ := db.activeFile.Size()
 	assert.True(
 		t,
 		size <= db.options.MaxDataFileSize,
@@ -470,4 +471,49 @@ func TestDB_NewWriteBatch(t *testing.T) {
 	val, err = db.Get([]byte("114"))
 	assert.Nil(t, err)
 	assert.Equal(t, "514", string(val))
+}
+
+func TestDB_FileLock(t *testing.T) {
+	db1, _ := LaunchDB(DefaultDBOptions)
+	defer destroyDB(db1)
+
+	assert.NotNil(t, db1.fileLock)
+
+	var err error
+
+	db2, err := LaunchDB(DefaultDBOptions)
+	assert.Nil(t, db2)
+	assert.Equal(t, ErrDatabaseIsUsed, err)
+
+	err = db1.Close()
+	assert.Nil(t, err)
+
+	db2, err = LaunchDB(DefaultDBOptions)
+	assert.Nil(t, err)
+	assert.NotNil(t, db2.fileLock)
+	err = db2.Close()
+	assert.Nil(t, err)
+}
+
+func TestDB_MMap(t *testing.T) {
+	db, _ := LaunchDB(DefaultDBOptions)
+	defer destroyDB(db)
+
+	for i := 1; i <= 10000000; i++ {
+		db.Put(utils.NewKey(i), utils.NewRandomValue(256))
+	}
+	db.Close()
+
+	logTemplate := "use memory mapping at startup: %v, time elapsed: %v\n"
+
+	now := time.Now()
+	db, _ = LaunchDB(DefaultDBOptions)
+	t.Log(fmt.Sprintf(logTemplate, DefaultDBOptions.MMapAtStartup, time.Since(now)))
+	db.Close()
+
+	now = time.Now()
+	DefaultDBOptions.MMapAtStartup = !DefaultDBOptions.MMapAtStartup
+	db, _ = LaunchDB(DefaultDBOptions)
+	t.Log(fmt.Sprintf(logTemplate, DefaultDBOptions.MMapAtStartup, time.Since(now)))
+	db.Close()
 }

@@ -8,20 +8,25 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var (
-	filePath = filepath.Join("/tmp", "baradb-114514.data")
-)
+var filePath = filepath.Join("/tmp", "baradb-114514.data")
+
+func destroyFile() {
+	err := os.RemoveAll(filePath)
+	if err != nil {
+		panic(err)
+	}
+}
 
 func TestNewFileIO(t *testing.T) {
 	fio, err := NewFileIO(filePath)
-	defer os.Remove(filePath)
+	defer destroyFile()
 	assert.Nil(t, err)
 	assert.NotNil(t, fio)
 }
 
 func TestFileIO_Write(t *testing.T) {
 	fio, _ := NewFileIO(filePath)
-	defer os.Remove(filePath)
+	defer destroyFile()
 
 	res, err := fio.Write(nil)
 	assert.Nil(t, err)
@@ -42,7 +47,7 @@ func TestFileIO_Write(t *testing.T) {
 
 func TestFileIO_Read(t *testing.T) {
 	fio, _ := NewFileIO(filePath)
-	defer os.Remove(filePath)
+	defer destroyFile()
 
 	fio.Write([]byte("114514"))
 	fio.Write([]byte("1919810"))
@@ -62,7 +67,7 @@ func TestFileIO_Read(t *testing.T) {
 
 func TestFileIO_Sync(t *testing.T) {
 	fio, _ := NewFileIO(filePath)
-	defer os.Remove(filePath)
+	defer destroyFile()
 
 	fio.Write([]byte("114514"))
 	fio.Write([]byte("1919810"))
@@ -73,7 +78,7 @@ func TestFileIO_Sync(t *testing.T) {
 
 func TestFileIO_Close(t *testing.T) {
 	fio, _ := NewFileIO(filePath)
-	defer os.Remove(filePath)
+	defer destroyFile()
 
 	fio.Write([]byte("114514"))
 	fio.Write([]byte("1919810"))

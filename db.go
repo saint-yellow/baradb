@@ -1,6 +1,7 @@
 package baradb
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -9,11 +10,17 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/gofrs/flock"
+
 	"github.com/saint-yellow/baradb/data"
 	"github.com/saint-yellow/baradb/indexer"
+	"github.com/saint-yellow/baradb/io_handler"
 )
 
-const tranNoKey = "tran-no"
+const (
+	tranNoKey    = "tran-no"
+	fileLockName = "flock"
+)
 
 // DB baradb engine instance
 type DB struct {
@@ -27,6 +34,8 @@ type DB struct {
 	isMerging        bool                      // Whether the DB is merging
 	tranNoFileExists bool                      // Whether a file about transaction serial number exists
 	isFirstLaunch    bool                      // Whether the DB engine is launched for the first time
+	fileLock         *flock.Flock              // File lock
+	bytesWritten     uint                      // Bytes written by the DB
 }
 
 // LaunchDB launches a DB engine instance
@@ -43,6 +52,16 @@ func LaunchDB(options DBOptions) (*DB, error) {
 		if err := os.Mkdir(options.Directory, os.ModePerm); err != nil {
 			return nil, err
 		}
+	}
+
+	// Get the file lock of the directory
+	fileLock := flock.New(filepath.Join(options.Directory, fileLockName))
+	hold, err := fileLock.TryLock()
+	if err != nil {
+		return nil, err
+	}
+	if !hold {
+		return nil, ErrDatabaseIsUsed
 	}
 
 	entries, err := os.ReadDir(options.Directory)
@@ -65,6 +84,7 @@ func LaunchDB(options DBOptions) (*DB, error) {
 			options.SyncWrites,
 		),
 		isFirstLaunch: isFirstLaunch,
+		fileLock:      fileLock,
 	}
 
 	if err := db.loadMergenceFiles(); err != nil {
@@ -86,13 +106,20 @@ func LaunchDB(options DBOptions) (*DB, error) {
 		}
 	}
 
+	// Reset the type of I/O handler
+	if db.options.MMapAtStartup {
+		if err := db.resetIOHandler(); err != nil {
+			return nil, err
+		}
+	}
+
 	// Get a transaction serial number from file
 	if options.IndexerType == indexer.BPtree {
 		if err := db.loadTranNo(); err != nil {
 			return nil, err
 		}
 		if db.activeFile != nil {
-			size, err := db.activeFile.IOHandler.Size()
+			size, err := db.activeFile.Size()
 			if err != nil {
 				return nil, err
 			}
@@ -222,8 +249,8 @@ func (db *DB) appendLogRecord(lr *data.LogRecord, needMutex bool) (*data.LogReco
 		}
 	}
 
-	encodedRecord, encodedLength := data.EncodeLogRecord(lr)
-	if db.activeFile.WriteOffset+encodedLength > db.options.MaxDataFileSize {
+	elr, n := data.EncodeLogRecord(lr)
+	if db.activeFile.WriteOffset+n > db.options.MaxDataFileSize {
 		if err := db.activeFile.Sync(); err != nil {
 			return nil, err
 		}
@@ -236,13 +263,26 @@ func (db *DB) appendLogRecord(lr *data.LogRecord, needMutex bool) (*data.LogReco
 	}
 
 	writeOffset := db.activeFile.WriteOffset
-	if err := db.activeFile.Write(encodedRecord); err != nil {
+	if err := db.activeFile.Write(elr); err != nil {
 		return nil, err
 	}
 
-	if db.options.SyncWrites {
+	// Accumulate the witten bytes
+	db.bytesWritten += uint(n)
+
+	// Persist data
+	needSync := db.options.SyncWrites
+	if !needSync && db.options.SyncThreshold > 0 && db.bytesWritten >= db.options.SyncThreshold {
+		needSync = true
+	}
+	if needSync {
 		if err := db.activeFile.Sync(); err != nil {
 			return nil, err
+		}
+
+		// Reset the written bytes
+		if db.bytesWritten > 0 {
+			db.bytesWritten = 0
 		}
 	}
 
@@ -258,7 +298,7 @@ func (db *DB) setActiveFile() error {
 		fileID = db.activeFile.FileID + 1
 	}
 
-	file, err := data.OpenDataFile(db.options.Directory, fileID)
+	file, err := data.OpenDataFile(db.options.Directory, fileID, io_handler.FileIOHandler)
 	if err != nil {
 		return err
 	}
@@ -292,7 +332,11 @@ func (db *DB) loadDataFiles() error {
 
 	// Open every single data file sequantially
 	for i, fileID := range fileIDs {
-		file, err := data.OpenDataFile(db.options.Directory, uint32(fileID))
+		ioHandlerType := io_handler.FileIOHandler
+		if db.options.MMapAtStartup {
+			ioHandlerType = io_handler.MMapIOHandler
+		}
+		file, err := data.OpenDataFile(db.options.Directory, uint32(fileID), ioHandlerType)
 		if err != nil {
 			return err
 		}
@@ -464,6 +508,25 @@ func (db *DB) loadTranNo() error {
 	return os.Remove(filePath)
 }
 
+func (db *DB) resetIOHandler() error {
+	if db.activeFile == nil {
+		return nil
+	}
+
+	var err error
+	err = db.activeFile.SetIOHandler(io_handler.FileIOHandler)
+	if err != nil {
+		return err
+	}
+	for _, file := range db.inactiveFiles {
+		err = file.SetIOHandler(io_handler.FileIOHandler)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // NewItrerator initializes an iterator of DB engine
 func (db *DB) NewItrerator(options indexer.IteratorOptions) *Iterator {
 	iterator := &Iterator{
@@ -516,13 +579,19 @@ func (db *DB) Fold(fn userOperationFunc) error {
 
 // Close closes the DB engine
 func (db *DB) Close() error {
-	db.mu.Lock()
-	defer db.mu.Unlock()
+	defer func() {
+		if err := db.fileLock.Unlock(); err != nil {
+			panic(fmt.Sprintf("Failed to unlock the directory, %v", err))
+		}
+	}()
 
 	// There is nothing to do if the DB engine has no data file
 	if db.activeFile == nil {
 		return nil
 	}
+
+	db.mu.Lock()
+	defer db.mu.Unlock()
 
 	var err error
 

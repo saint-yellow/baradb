@@ -5,26 +5,28 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/saint-yellow/baradb/io_handler"
 )
 
 var tempDir string = os.TempDir()
 
 func TestOpenDataFile(t *testing.T) {
-	file1, err := OpenDataFile(tempDir, 114)
+	file1, err := OpenDataFile(tempDir, 114, io_handler.FileIOHandler)
 	assert.Nil(t, err)
 	assert.NotNil(t, file1)
 
-	file2, err := OpenDataFile(tempDir, 514)
+	file2, err := OpenDataFile(tempDir, 514, io_handler.FileIOHandler)
 	assert.Nil(t, err)
 	assert.NotNil(t, file2)
 
-	file3, err := OpenDataFile(tempDir, 114)
+	file3, err := OpenDataFile(tempDir, 114, io_handler.FileIOHandler)
 	assert.Nil(t, err)
 	assert.NotNil(t, file3)
 }
 
 func TestDataFile_Write(t *testing.T) {
-	file, _ := OpenDataFile(tempDir, 114)
+	file, _ := OpenDataFile(tempDir, 114, io_handler.FileIOHandler)
 	err := file.Write([]byte("114"))
 	assert.Nil(t, err)
 	err = file.Write([]byte("winter flower"))
@@ -32,22 +34,22 @@ func TestDataFile_Write(t *testing.T) {
 }
 
 func TestDataFile_Close(t *testing.T) {
-	file1, _ := OpenDataFile(tempDir, 114)
+	file1, _ := OpenDataFile(tempDir, 114, io_handler.FileIOHandler)
 	file1.Write([]byte("14530529"))
 	err := file1.Close()
 	assert.Nil(t, err)
 
-	file2, _ := OpenDataFile(tempDir, 514)
+	file2, _ := OpenDataFile(tempDir, 514, io_handler.FileIOHandler)
 	err = file2.Close()
 	assert.Nil(t, err)
 }
 
 func TestDataFile_Sync(t *testing.T) {
-	file1, _ := OpenDataFile(tempDir, 114)
+	file1, _ := OpenDataFile(tempDir, 114, io_handler.FileIOHandler)
 	err := file1.Sync()
 	assert.Nil(t, err)
 
-	file2, _ := OpenDataFile(tempDir, 514)
+	file2, _ := OpenDataFile(tempDir, 514, io_handler.FileIOHandler)
 	file2.Write([]byte("1145141919810"))
 	file2.Write([]byte("1145141919810"))
 	err = file2.Sync()
@@ -56,7 +58,7 @@ func TestDataFile_Sync(t *testing.T) {
 
 func TestDataFile_ReadLogRecord(t *testing.T) {
 	// Suppose to open a brand new data file with a log record
-	file, _ := OpenDataFile(tempDir, 1919)
+	file, _ := OpenDataFile(tempDir, 1919, io_handler.FileIOHandler)
 
 	// Test the first log record
 	lr1 := &LogRecord{

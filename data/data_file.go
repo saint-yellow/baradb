@@ -18,21 +18,27 @@ const (
 
 // DataFile represents a data file in a baradb engine instance
 type DataFile struct {
+	path        string               // path of the data file
 	FileID      uint32               // FileID identifies of a data file
 	WriteOffset int64                // WriteOffset indicates the offset of the written data in a data file
-	IOHandler   io_handler.IOHandler // IOHandler is used to handle I/O operations in a data file
+	ioHandler   io_handler.IOHandler // ioHandler is used to handle I/O operations in a data file
 }
 
 // newDataFile constructs a data file
-func newDataFile(fileaPath string, fileID uint32) (*DataFile, error) {
-	ioHandler, err := io_handler.NewIOHandler(io_handler.FileIOHandler, fileaPath)
+func newDataFile(
+	filePath string,
+	fileID uint32,
+	ioHandlerType io_handler.IOHandlerType,
+) (*DataFile, error) {
+	ioHandler, err := io_handler.NewIOHandler(ioHandlerType, filePath)
 	if err != nil {
 		return nil, err
 	}
 	file := &DataFile{
+		path:        filePath,
 		FileID:      fileID,
 		WriteOffset: 0,
-		IOHandler:   ioHandler,
+		ioHandler:   ioHandler,
 	}
 	return file, nil
 }
@@ -44,33 +50,37 @@ func GetDataFilePath(directory string, fileID uint32) string {
 }
 
 // OpenDataFile opens a data file
-func OpenDataFile(directory string, fileID uint32) (*DataFile, error) {
+func OpenDataFile(
+	directory string,
+	fileID uint32,
+	ioHandlerType io_handler.IOHandlerType,
+) (*DataFile, error) {
 	filePath := GetDataFilePath(directory, fileID)
-	return newDataFile(filePath, fileID)
+	return newDataFile(filePath, fileID, ioHandlerType)
 }
 
 // OpenHintFile opens a hint file
 func OpenHintFile(directory string) (*DataFile, error) {
 	filePath := filepath.Join(directory, HintFileName)
-	return newDataFile(filePath, 0)
+	return newDataFile(filePath, 0, io_handler.FileIOHandler)
 }
 
 // OpenMergedFile opens a merged file
 func OpenMergedFile(directory string) (*DataFile, error) {
 	filePath := filepath.Join(directory, MergedFileName)
-	return newDataFile(filePath, 0)
+	return newDataFile(filePath, 0, io_handler.FileIOHandler)
 }
 
 // OpenTranNoFile opens a file about a transaction serial number
 func OpenTranNoFile(directory string) (*DataFile, error) {
 	filePath := filepath.Join(directory, TranNoFileName)
-	return newDataFile(filePath, 0)
+	return newDataFile(filePath, 0, io_handler.FileIOHandler)
 }
 
 // ReadLogRecord reads single log record by given offset in a data file
 func (df *DataFile) ReadLogRecord(offset int64) (*LogRecord, int64, error) {
 	// Get the size of the data file
-	fileSize, err := df.IOHandler.Size()
+	fileSize, err := df.ioHandler.Size()
 	if err != nil {
 		return nil, 0, err
 	}
@@ -124,11 +134,11 @@ func (df *DataFile) ReadLogRecord(offset int64) (*LogRecord, int64, error) {
 }
 
 func (df *DataFile) Sync() error {
-	return df.IOHandler.Sync()
+	return df.ioHandler.Sync()
 }
 
 func (df *DataFile) Write(data []byte) error {
-	n, err := df.IOHandler.Write(data)
+	n, err := df.ioHandler.Write(data)
 	if err != nil {
 		return err
 	}
@@ -137,13 +147,17 @@ func (df *DataFile) Write(data []byte) error {
 }
 
 func (df *DataFile) Close() error {
-	return df.IOHandler.Close()
+	return df.ioHandler.Close()
+}
+
+func (df *DataFile) Size() (int64, error) {
+	return df.ioHandler.Size()
 }
 
 // readNBytes Read n bytes from given offset in a data file.
 func (df *DataFile) readNBytes(n int64, offset int64) ([]byte, error) {
 	b := make([]byte, n)
-	_, err := df.IOHandler.Read(b, offset)
+	_, err := df.ioHandler.Read(b, offset)
 	return b, err
 }
 
@@ -155,4 +169,26 @@ func WriteHintRecord(hintFile *DataFile, key []byte, lrp *LogRecordPosition) err
 	}
 	elr, _ := EncodeLogRecord(lr)
 	return hintFile.Write(elr)
+}
+
+func (df *DataFile) SetIOHandler(ioHandlerType io_handler.IOHandlerType) error {
+	var err error
+
+	err = df.ioHandler.Close()
+	if err != nil {
+		return err
+	}
+
+	ioHandler, err := io_handler.NewIOHandler(ioHandlerType, df.path)
+	if err != nil {
+		return err
+	}
+
+	df.ioHandler = ioHandler
+	return nil
+}
+
+// Path returns the path of a data file
+func (df *DataFile) Path() string {
+	return df.path
 }
