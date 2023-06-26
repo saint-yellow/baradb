@@ -22,16 +22,19 @@ func NewBTree() *BTree {
 	}
 }
 
-// Put data to BTree
-func (bt *BTree) Put(key []byte, position *data.LogRecordPosition) bool {
+// Put puts data to B tree indexer
+func (bt *BTree) Put(key []byte, position *data.LogRecordPosition) *data.LogRecordPosition {
 	x := &Item{
 		Key:      key,
 		Position: position,
 	}
 	bt.lock.Lock()
-	defer bt.lock.Unlock()
-	bt.tree.ReplaceOrInsert(x)
-	return true
+	oldItem := bt.tree.ReplaceOrInsert(x)
+	bt.lock.Unlock()
+	if oldItem == nil {
+		return nil
+	}
+	return oldItem.(*Item).Position
 }
 
 // Get data from BTree
@@ -51,15 +54,18 @@ func (bt *BTree) Size() int {
 	return bt.tree.Len()
 }
 
-// Delete data from BTree
-func (bt *BTree) Delete(key []byte) bool {
+// Delete deletes a key from the B tree indexer
+func (bt *BTree) Delete(key []byte) (*data.LogRecordPosition, bool) {
 	x := &Item{
 		Key: key,
 	}
 	bt.lock.Lock()
-	defer bt.lock.Unlock()
 	y := bt.tree.Delete(x)
-	return y != nil
+	bt.lock.Unlock()
+	if y == nil {
+		return nil, false
+	}
+	return y.(*Item).Position, true
 }
 
 func (bt *BTree) Iterator(reverse bool) Iterator {

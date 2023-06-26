@@ -14,4 +14,6 @@ var (
 	ErrExceedMaxBatchNumber      = errors.New("Exceed the maximum batch number")
 	ErrMergenceIsInProgress      = errors.New("Mergence is in progress, try again later")
 	ErrDatabaseIsUsed            = errors.New("The database is used by other process")
+	ErrInvalidMergenceThreshold  = errors.New("Invalid mergence threshold")
+	ErrNoMoreDiskSpace           = errors.New("No more disk space to store data")
 )

@@ -15,6 +15,7 @@ import (
 	"github.com/saint-yellow/baradb/data"
 	"github.com/saint-yellow/baradb/indexer"
 	"github.com/saint-yellow/baradb/io_handler"
+	"github.com/saint-yellow/baradb/utils"
 )
 
 const (
@@ -36,6 +37,7 @@ type DB struct {
 	isFirstLaunch    bool                      // Whether the DB engine is launched for the first time
 	fileLock         *flock.Flock              // File lock
 	bytesWritten     uint                      // Bytes written by the DB
+	reclaimSize      int64                     // Size of invalid data
 }
 
 // LaunchDB launches a DB engine instance
@@ -154,13 +156,15 @@ func (db *DB) Put(key, value []byte) error {
 		Type:  data.NormalLogRecord,
 	}
 
-	position, err := db.appendLogRecord(lr, true)
+	// Append the data to the current active data file
+	lrp, err := db.appendLogRecord(lr, true)
 	if err != nil {
 		return err
 	}
 
-	if ok := db.indexer.Put(key, position); !ok {
-		return ErrIndexUpdateFailed
+	// Update the data in the indexer
+	if oldLRP := db.indexer.Put(key, lrp); oldLRP != nil {
+		db.reclaimSize += int64(oldLRP.Size)
 	}
 
 	return nil
@@ -225,12 +229,20 @@ func (db *DB) Delete(key []byte) error {
 		Type: data.DeletedLogRecord,
 	}
 
-	if _, err := db.appendLogRecord(lr, true); err != nil {
+	//
+	lrp, err := db.appendLogRecord(lr, true)
+	if err != nil {
 		return err
 	}
+	db.reclaimSize += int64(lrp.Size)
 
-	if ok := db.indexer.Delete(key); !ok {
+	//
+	oldLRP, ok := db.indexer.Delete(key)
+	if !ok {
 		return ErrIndexUpdateFailed
+	}
+	if oldLRP != nil {
+		db.reclaimSize += int64(oldLRP.Size)
 	}
 
 	return nil
@@ -286,8 +298,12 @@ func (db *DB) appendLogRecord(lr *data.LogRecord, needMutex bool) (*data.LogReco
 		}
 	}
 
-	position := &data.LogRecordPosition{FileID: db.activeFile.FileID, Offset: writeOffset}
-	return position, nil
+	lrp := &data.LogRecordPosition{
+		FileID: db.activeFile.FileID,
+		Offset: writeOffset,
+		Size:   uint32(n),
+	}
+	return lrp, nil
 }
 
 // setActiveFile sets an active data file in DB
@@ -369,15 +385,16 @@ func (db *DB) loadIndexFromDataFiles() error {
 	}
 
 	updateIndex := func(key []byte, lrt data.LogRecordType, lrp *data.LogRecordPosition) {
-		var ok bool
+		var oldLRP *data.LogRecordPosition
 		if lrt == data.DeletedLogRecord {
-			ok = db.indexer.Delete(key)
+			oldLRP, _ = db.indexer.Delete(key)
+			db.reclaimSize += int64(lrp.Size)
 		} else {
-			ok = db.indexer.Put(key, lrp)
+			oldLRP = db.indexer.Put(key, lrp)
 		}
 
-		if !ok {
-			panic(ErrIndexUpdateFailed)
+		if oldLRP != nil {
+			db.reclaimSize += int64(oldLRP.Size)
 		}
 	}
 
@@ -407,7 +424,11 @@ func (db *DB) loadIndexFromDataFiles() error {
 				return err
 			}
 
-			lrp := &data.LogRecordPosition{FileID: fileID, Offset: offset}
+			lrp := &data.LogRecordPosition{
+				FileID: fileID,
+				Offset: offset,
+				Size:   uint32(n),
+			}
 
 			// Decode the key of the log record to get the real key and the transaction serial number
 			lrKey, tranNo := decodeLogRecordKeyWithTranNo(lr.Key)
@@ -663,4 +684,28 @@ func (db *DB) NewWriteBatch(options WriteBatchOptions) *WriteBatch {
 		pendingWrites: make(map[string]*data.LogRecord),
 	}
 	return wb
+}
+
+// Stat returns statistical information of the DB engine
+func (db *DB) Stat() *Stat {
+	db.mu.RLock()
+	defer db.mu.RUnlock()
+
+	dataFileNumber := len(db.inactiveFiles)
+	if db.activeFile != nil {
+		dataFileNumber += 1
+	}
+
+	dataFileSize, err := utils.DirSize(db.getMergenceDiretory())
+	if err != nil {
+		panic(fmt.Sprintf("Failed to read the directory of the DB engine: %v", err))
+	}
+
+	stat := &Stat{
+		KeyNumber:       uint(db.indexer.Size()),
+		DataFileNumber:  uint(dataFileNumber),
+		ReclaimableSize: db.reclaimSize,
+		DiskSize:        dataFileSize,
+	}
+	return stat
 }

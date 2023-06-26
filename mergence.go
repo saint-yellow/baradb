@@ -9,6 +9,7 @@ import (
 	"strconv"
 
 	"github.com/saint-yellow/baradb/data"
+	"github.com/saint-yellow/baradb/utils"
 )
 
 const (
@@ -29,6 +30,28 @@ func (db *DB) Merge() error {
 	if db.isMerging {
 		db.mu.Unlock()
 		return ErrMergenceIsInProgress
+	}
+
+	// Get the proportion of the invalid data in the DB engine
+	totalSize, err := utils.DirSize(db.options.Directory)
+	if err != nil {
+		db.mu.Unlock()
+		return err
+	}
+	propagation := float64(db.reclaimSize) / float64(totalSize)
+	if db.options.MergenceThreshold != 0 && propagation < db.options.MergenceThreshold {
+		db.mu.Unlock()
+		return nil
+	}
+
+	// Get the available disk space
+	availableSize, err := utils.AvailableDiskSize()
+	if err != nil {
+		db.mu.Unlock()
+		return err
+	}
+	if totalSize-db.reclaimSize >= availableSize {
+		return ErrNoMoreDiskSpace
 	}
 
 	db.isMerging = true

@@ -517,3 +517,33 @@ func TestDB_MMap(t *testing.T) {
 	t.Log(fmt.Sprintf(logTemplate, DefaultDBOptions.MMapAtStartup, time.Since(now)))
 	db.Close()
 }
+
+func TestDB_Stat(t *testing.T) {
+	db, _ := LaunchDB(DefaultDBOptions)
+	defer destroyDB(db)
+
+	var stat *Stat
+
+	// No key
+	stat = db.Stat()
+	assert.Zero(t, stat.KeyNumber)
+	assert.Zero(t, stat.DataFileNumber)
+	assert.Zero(t, stat.ReclaimableSize)
+	assert.Zero(t, stat.DiskSize)
+	t.Log(stat)
+
+	// So many keys
+	keyNumber := 100000
+	for i := 1; i <= keyNumber; i++ {
+		db.Put(utils.NewKey(i), utils.NewRandomValue(128))
+	}
+
+	stat = db.Stat()
+	assert.Equal(t, keyNumber, int(stat.KeyNumber))
+	entries, _ := os.ReadDir(db.options.Directory)
+	assert.Equal(t, len(entries)-1, int(stat.DataFileNumber))
+	assert.Equal(t, len(db.inactiveFiles)+1, int(stat.DataFileNumber))
+	assert.True(t, stat.DiskSize <= DefaultDBOptions.MaxDataFileSize*int64(stat.DataFileNumber))
+	assert.Positive(t, stat.DiskSize)
+	t.Log(stat)
+}

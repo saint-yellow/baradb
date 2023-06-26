@@ -19,9 +19,13 @@ func TestARTree_New(t *testing.T) {
 func TestARTree_Put(t *testing.T) {
 	tree := NewARTree()
 
-	var ok bool
-	ok = tree.Put([]byte("114"), &data.LogRecordPosition{FileID: 114, Offset: 114})
-	assert.True(t, ok)
+	var lrp *data.LogRecordPosition
+
+	lrp = tree.Put([]byte("114"), &data.LogRecordPosition{FileID: 114, Offset: 114})
+	assert.Nil(t, lrp)
+
+	lrp = tree.Put([]byte("14"), &data.LogRecordPosition{FileID: 514, Offset: 514})
+	assert.NotNil(t, lrp)
 }
 
 func TestARTree_Get(t *testing.T) {
@@ -42,12 +46,16 @@ func TestARTree_Get(t *testing.T) {
 func TestARTree_Delete(t *testing.T) {
 	tree := NewARTree()
 
+	var lrp *data.LogRecordPosition
+	var ok bool
 	tree.Put([]byte("114"), &data.LogRecordPosition{FileID: 114, Offset: 114})
-	lrp := tree.Get([]byte("114"))
+	lrp = tree.Get([]byte("114"))
 	assert.NotNil(t, lrp)
-	ok := tree.Delete([]byte("114"))
+	lrp, ok = tree.Delete([]byte("114"))
+	assert.NotNil(t, lrp)
 	assert.True(t, ok)
-	ok = tree.Delete([]byte("114"))
+	lrp, ok = tree.Delete([]byte("114"))
+	assert.NotNil(t, lrp)
 	assert.False(t, ok)
 }
 

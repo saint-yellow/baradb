@@ -11,19 +11,19 @@ import (
 // Indexer Abstract interface of an indexer
 type Indexer interface {
 	// Put stores location of the corresponding data of the key in the indexer
-	Put(key []byte, position *data.LogRecordPosition) bool
+	Put([]byte, *data.LogRecordPosition) *data.LogRecordPosition
 
 	// Get gets the location of the corresponding data af the key in the indexer
-	Get(key []byte) *data.LogRecordPosition
+	Get([]byte) *data.LogRecordPosition
 
 	// Delete deletes the location of the corresponding data of the key in the indexer
-	Delete(key []byte) bool
+	Delete([]byte) (*data.LogRecordPosition, bool)
 
 	// Size returns how many key/value pairs in the indexer
 	Size() int
 
 	// Iterator returns an iterator
-	Iterator(reverse bool) Iterator
+	Iterator(bool) Iterator
 
 	// Close closes the indexer
 	Close() error

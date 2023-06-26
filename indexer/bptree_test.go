@@ -37,11 +37,11 @@ func TestBPlusTree_Put(t *testing.T) {
 
 	tree := NewBPlusTree(directory, false)
 
-	var ok bool
-	ok = tree.Put([]byte("114"), &data.LogRecordPosition{FileID: 114, Offset: 0})
-	assert.True(t, ok)
-	ok = tree.Put([]byte("114"), &data.LogRecordPosition{FileID: 114, Offset: 1})
-	assert.True(t, ok)
+	var lrp *data.LogRecordPosition
+	lrp = tree.Put([]byte("114"), &data.LogRecordPosition{FileID: 114, Offset: 0})
+	assert.Nil(t, lrp)
+	lrp = tree.Put([]byte("114"), &data.LogRecordPosition{FileID: 114, Offset: 1})
+	assert.NotNil(t, lrp)
 }
 
 func TestBPlusTree_Get(t *testing.T) {
@@ -68,12 +68,16 @@ func TestBPlusTree_Delete(t *testing.T) {
 	tree := NewBPlusTree(directory, false)
 
 	var ok bool
-	ok = tree.Delete([]byte("114"))
+	var lrp *data.LogRecordPosition
+	lrp, ok = tree.Delete([]byte("114"))
+	assert.Nil(t, lrp)
 	assert.False(t, ok)
 	tree.Put([]byte("114"), &data.LogRecordPosition{FileID: 114, Offset: 4})
-	ok = tree.Delete([]byte("114"))
+	lrp, ok = tree.Delete([]byte("114"))
+	assert.NotNil(t, lrp)
 	assert.True(t, ok)
-	ok = tree.Delete([]byte("114"))
+	lrp, ok = tree.Delete([]byte("114"))
+	assert.Nil(t, lrp)
 	assert.False(t, ok)
 }
 

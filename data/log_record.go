@@ -5,10 +5,17 @@ import (
 	"hash/crc32"
 )
 
-// LogRecordPosition: index of in-memory data
+// LogRecordPosition represents a position of a LogRecord
+// A position of a LogRecord stores in an in-memory indexer
 type LogRecordPosition struct {
-	FileID uint32 // ID of the file where data is stored in
-	Offset int64  // Offset of data in the file
+	// ID of the data file where the log record is stored in
+	FileID uint32
+
+	// Offset of the log record in the data file
+	Offset int64
+
+	// Size of the log record (uint: Byte)
+	Size uint32
 }
 
 // LogRecordType types of log records
@@ -137,10 +144,11 @@ func (lr *LogRecord) crc(header []byte) uint32 {
 
 // EncodeLogRecordPosition encodes a LogRecordPosition into a byte array
 func EncodeLogRecordPosition(lrp *LogRecordPosition) []byte {
-	buffer := make([]byte, binary.MaxVarintLen32+binary.MaxVarintLen64)
+	buffer := make([]byte, binary.MaxVarintLen32*2+binary.MaxVarintLen64)
 	var index int = 0
 	index += binary.PutVarint(buffer[index:], int64(lrp.FileID))
 	index += binary.PutVarint(buffer[index:], lrp.Offset)
+	index += binary.PutVarint(buffer[index:], int64(lrp.Size))
 	return buffer[:index]
 }
 
@@ -149,10 +157,13 @@ func DecodeLogRecordPosition(buffer []byte) *LogRecordPosition {
 	var index int = 0
 	fileID, n := binary.Varint(buffer[index:])
 	index += n
-	offset, _ := binary.Varint(buffer[index:])
+	offset, n := binary.Varint(buffer[index:])
+	index += n
+	size, n := binary.Varint(buffer[index:])
 	lrp := &LogRecordPosition{
 		FileID: uint32(fileID),
 		Offset: offset,
+		Size:   uint32(size),
 	}
 	return lrp
 }

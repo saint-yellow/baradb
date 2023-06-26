@@ -24,12 +24,16 @@ func NewARTree() *ARTree {
 }
 
 // Put stores location of the corresponding data of the key in the indexer
-func (t *ARTree) Put(key []byte, position *data.LogRecordPosition) bool {
+func (t *ARTree) Put(key []byte, position *data.LogRecordPosition) *data.LogRecordPosition {
 	t.lock.Lock()
-	defer t.lock.Unlock()
+	oldValue, updated := t.tree.Insert(key, position)
+	t.lock.Unlock()
 
-	t.tree.Insert(key, position)
-	return true
+	var lrp *data.LogRecordPosition
+	if updated {
+		lrp = oldValue.(*data.LogRecordPosition)
+	}
+	return lrp
 }
 
 // Get gets the location of the corresponding data af the key in the indexer
@@ -46,12 +50,16 @@ func (t *ARTree) Get(key []byte) *data.LogRecordPosition {
 }
 
 // Delete deletes the location of the corresponding data of the key in the indexer
-func (t *ARTree) Delete(key []byte) bool {
+func (t *ARTree) Delete(key []byte) (*data.LogRecordPosition, bool) {
 	t.lock.Lock()
-	defer t.lock.Unlock()
+	oldValue, deleted := t.tree.Delete(key)
+	t.lock.Unlock()
 
-	_, deleted := t.tree.Delete(key)
-	return deleted
+	var lrp *data.LogRecordPosition
+	if deleted {
+		lrp = oldValue.(*data.LogRecordPosition)
+	}
+	return lrp, deleted
 }
 
 // Size returns how many key/value pairs in the indexer

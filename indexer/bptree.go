@@ -40,15 +40,21 @@ func NewBPlusTree(directory string, syncWrites bool) *BPlusTree {
 }
 
 // Put stores location of the corresponding data of the key in the indexer
-func (t *BPlusTree) Put(key []byte, position *data.LogRecordPosition) bool {
+func (t *BPlusTree) Put(key []byte, position *data.LogRecordPosition) *data.LogRecordPosition {
+	var oldValue []byte
 	err := t.tree.Update(func(tx *bbolt.Tx) error {
 		bucket := tx.Bucket(IndexBucketName)
+		oldValue = bucket.Get(key)
 		return bucket.Put(key, data.EncodeLogRecordPosition(position))
 	})
 	if err != nil {
 		panic("Failed to put a value to a B+ tree")
 	}
-	return true
+
+	if len(oldValue) > 0 {
+		return data.DecodeLogRecordPosition(oldValue)
+	}
+	return nil
 }
 
 // Get gets the location of the corresponding data af the key in the indexer
@@ -69,11 +75,13 @@ func (t *BPlusTree) Get(key []byte) *data.LogRecordPosition {
 }
 
 // Delete deletes the location of the corresponding data of the key in the indexer
-func (t *BPlusTree) Delete(key []byte) bool {
+func (t *BPlusTree) Delete(key []byte) (*data.LogRecordPosition, bool) {
 	var ok bool
+	var oldValue []byte
 	err := t.tree.Update(func(tx *bbolt.Tx) error {
 		bucket := tx.Bucket(IndexBucketName)
-		if value := bucket.Get(key); len(value) > 0 {
+		oldValue = bucket.Get(key)
+		if len(oldValue) > 0 {
 			ok = true
 			return bucket.Delete(key)
 		}
@@ -82,7 +90,12 @@ func (t *BPlusTree) Delete(key []byte) bool {
 	if err != nil {
 		panic("Failed to delete a value from a B+ tree")
 	}
-	return ok
+
+	var lrp *data.LogRecordPosition
+	if ok {
+		lrp = data.DecodeLogRecordPosition(oldValue)
+	}
+	return lrp, ok
 }
 
 // Size returns how many key/value pairs in the indexer

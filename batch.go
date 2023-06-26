@@ -124,10 +124,16 @@ func (wb *WriteBatch) Commit() error {
 	// Update in-memory index
 	for _, lr := range wb.pendingWrites {
 		lrp := positions[string(lr.Key)]
+		var oldLRP *data.LogRecordPosition
+
 		if lr.Type == data.NormalLogRecord {
-			wb.db.indexer.Put(lr.Key, lrp)
+			oldLRP = wb.db.indexer.Put(lr.Key, lrp)
 		} else if lr.Type == data.DeletedLogRecord {
-			wb.db.indexer.Delete(lr.Key)
+			oldLRP, _ = wb.db.indexer.Delete(lr.Key)
+		}
+
+		if oldLRP != nil {
+			wb.db.reclaimSize += int64(oldLRP.Size)
 		}
 	}
 
