@@ -44,29 +44,21 @@ func AvailableDiskSize() (int64, error) {
 //
 // Files excluded will be ignored.
 func CopyDir(src, dst string, exclude []string) error {
-	var err error
-
 	// Make sure the destination directory is exist
-	_, err = os.Stat(dst)
-	if os.IsNotExist(err) {
-		err = os.MkdirAll(dst, os.ModePerm)
-		if err != nil {
+	if _, err := os.Stat(dst); os.IsNotExist(err) {
+		if err := os.MkdirAll(dst, os.ModePerm); err != nil {
 			return err
 		}
 	}
 
-	err = filepath.Walk(src, func(path string, info fs.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
+	fn := func(path string, info fs.FileInfo, err error) error {
 		fileName := strings.Replace(path, src, "", 1)
 		if fileName == "" {
 			return nil
 		}
 
 		for _, e := range exclude {
-			matched, err := filepath.Match(e, fileName)
+			matched, err := filepath.Match(e, info.Name())
 			if err != nil {
 				return err
 			}
@@ -85,7 +77,6 @@ func CopyDir(src, dst string, exclude []string) error {
 		}
 
 		return os.WriteFile(filepath.Join(dst, fileName), data, info.Mode())
-	})
-
-	return err
+	}
+	return filepath.Walk(src, fn)
 }

@@ -549,3 +549,36 @@ func TestDB_Stat(t *testing.T) {
 	assert.Positive(t, stat.DiskSize)
 	t.Log(stat)
 }
+
+func TestDB_Backup(t *testing.T) {
+	db1, _ := LaunchDB(DefaultDBOptions)
+	defer destroyDB(db1)
+
+	keyNumber := 100000
+	for i := 1; i <= keyNumber; i++ {
+		db1.Put(utils.NewKey(i), utils.NewRandomValue(128))
+	}
+
+	dir := "/tmp/baradb-backup"
+	err := db1.Backup(dir)
+	assert.Nil(t, err)
+
+	n1 := db1.Stat().DataFileNumber
+	entries, err := os.ReadDir(dir)
+	assert.Nil(t, err)
+	n2 := len(entries)
+	assert.Equal(t, int(n1), n2)
+
+	s1, err := utils.DirSize(db1.options.Directory)
+	assert.Nil(t, err)
+	s2, err := utils.DirSize(dir)
+	assert.Nil(t, err)
+	assert.Equal(t, s1, s2)
+
+	opts2 := DefaultDBOptions
+	opts2.Directory = dir
+	db2, _ := LaunchDB(opts2)
+	defer destroyDB(db2)
+
+	assert.EqualValues(t, db1.Stat(), db2.Stat())
+}

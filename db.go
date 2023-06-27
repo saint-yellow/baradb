@@ -144,9 +144,17 @@ func (db *DB) Fork(directory string) (*DB, error) {
 	return LaunchDB(opts)
 }
 
-// Backup copies the DB's data files to a given directory
+// Backup copies the DB's data files to a given directory.
+//
+// NOTE: only data files will be copied, other files like tran-no, flock will be ignored.
 func (db *DB) Backup(directory string) error {
-	return nil
+	db.mu.RLock()
+	defer db.mu.RUnlock()
+
+	excludedFiles := []string{
+		fileLockName,
+	}
+	return utils.CopyDir(db.options.Directory, directory, excludedFiles)
 }
 
 // Put Writes data to the DB engine
@@ -701,7 +709,7 @@ func (db *DB) Stat() *Stat {
 		dataFileNumber += 1
 	}
 
-	dataFileSize, err := utils.DirSize(db.getMergenceDiretory())
+	dataFileSize, err := utils.DirSize(db.options.Directory)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to read the directory of the DB engine: %v", err))
 	}
