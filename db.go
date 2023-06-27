@@ -144,6 +144,11 @@ func (db *DB) Fork(directory string) (*DB, error) {
 	return LaunchDB(opts)
 }
 
+// Backup copies the DB's data files to a given directory
+func (db *DB) Backup(directory string) error {
+	return nil
+}
+
 // Put Writes data to the DB engine
 func (db *DB) Put(key, value []byte) error {
 	if len(key) == 0 {
@@ -564,7 +569,7 @@ func (db *DB) ListKeys() [][]byte {
 	iter := db.indexer.Iterator(false)
 	keys := make([][]byte, db.indexer.Size())
 
-	var index int = 0
+	index := 0
 	for iter.Rewind(); iter.Valid(); iter.Next() {
 		keys[index] = iter.Key()
 		index++

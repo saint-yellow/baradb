@@ -139,7 +139,7 @@ func TestDB_Get(t *testing.T) {
 
 	// Get a key/value pair in an inactive data file
 	b, err = db.Get([]byte("1919"))
-	assert.Nil(t, nil)
+	assert.Nil(t, err)
 	assert.Equal(t, "810", string(b))
 
 	// Relaunch the DB engine and a stored value
@@ -169,7 +169,7 @@ func TestDB_Delete(t *testing.T) {
 	// Delete a key normally
 	db.Put([]byte("114"), []byte("514"))
 	err = db.Delete([]byte("114"))
-	assert.Nil(t, nil)
+	assert.Nil(t, err)
 	b, err := db.Get([]byte("114"))
 	assert.Equal(t, ErrKeyNotFound, err)
 	assert.Nil(t, b)
@@ -223,7 +223,7 @@ func TestDB_NewIterator(t *testing.T) {
 	defer iter3.Close()
 	assert.NotNil(t, iter3)
 	assert.True(t, iter3.Valid())
-	var index int = 1
+	index := 1
 	for iter3.Rewind(); iter3.Valid(); iter3.Next() {
 		assert.Equal(t, fmt.Sprintf("%02d", index), string(iter3.Key()))
 		b, err = iter3.Value()
@@ -311,7 +311,7 @@ func TestDB_ListKeys(t *testing.T) {
 	}
 	keys = db.ListKeys()
 	assert.Equal(t, keysCount, len(keys))
-	var index int = 11
+	index := 11
 	for _, key := range keys {
 		assert.Equal(t, fmt.Sprintf("%02d", index), string(key))
 		index++
@@ -434,8 +434,10 @@ func TestDB_NewWriteBatch(t *testing.T) {
 	db, _ := LaunchDB(DefaultDBOptions)
 	defer destroyDB(db)
 
-	var err error
-	var wb *WriteBatch
+	var (
+		err error
+		wb  *WriteBatch
+	)
 
 	// Write data, no commit
 	wb = db.NewWriteBatch(DefaultWriteBatchOptions)
@@ -508,13 +510,13 @@ func TestDB_MMap(t *testing.T) {
 
 	now := time.Now()
 	db, _ = LaunchDB(DefaultDBOptions)
-	t.Log(fmt.Sprintf(logTemplate, DefaultDBOptions.MMapAtStartup, time.Since(now)))
+	t.Logf(fmt.Sprintf(logTemplate, DefaultDBOptions.MMapAtStartup, time.Since(now)))
 	db.Close()
 
 	now = time.Now()
 	DefaultDBOptions.MMapAtStartup = !DefaultDBOptions.MMapAtStartup
 	db, _ = LaunchDB(DefaultDBOptions)
-	t.Log(fmt.Sprintf(logTemplate, DefaultDBOptions.MMapAtStartup, time.Since(now)))
+	t.Logf(fmt.Sprintf(logTemplate, DefaultDBOptions.MMapAtStartup, time.Since(now)))
 	db.Close()
 }
 

@@ -53,13 +53,13 @@ func EncodeLogRecord(lr *LogRecord) ([]byte, int64) {
 	// Store the type of the log record to the header
 	header[4] = lr.Type
 
-	var index int = 5
+	index := 5
 	// Store the size of the key and the value of the log record to the header
 	index += binary.PutVarint(header[index:], int64(len(lr.Key)))
 	index += binary.PutVarint(header[index:], int64(len(lr.Value)))
 
 	// Total size of the header and the log reocrd
-	var size int = index + len(lr.Key) + len(lr.Value)
+	size := index + len(lr.Key) + len(lr.Value)
 
 	// Copy the known data to the new byte array
 	encodedBytes := make([]byte, size)
@@ -82,13 +82,13 @@ func encodeLogRecordHeader(lr *LogRecord) ([]byte, int64) {
 	// Store the type of the log record to the header
 	header[4] = lr.Type
 
-	var index int = 5
+	index := 5
 	// Store the size of the key and the value of the log record to the header
 	index += binary.PutVarint(header[index:], int64(len(lr.Key)))
 	index += binary.PutVarint(header[index:], int64(len(lr.Value)))
 
 	// Total size of the header and the log reocrd
-	var size int = index + len(lr.Key) + len(lr.Value)
+	size := index + len(lr.Key) + len(lr.Value)
 
 	// Copy the known data to the new byte array
 	encodedBytes := make([]byte, size)
@@ -114,7 +114,7 @@ func decodeLogRecordHeader(buffer []byte) (*logRecordHeader, int64) {
 		logRecordType: buffer[4],
 	}
 
-	var index int = 5
+	index := 5
 
 	// Get the actual size of the key of the log reocrd
 	keySize, n := binary.Varint(buffer[index:])
@@ -145,7 +145,7 @@ func (lr *LogRecord) crc(header []byte) uint32 {
 // EncodeLogRecordPosition encodes a LogRecordPosition into a byte array
 func EncodeLogRecordPosition(lrp *LogRecordPosition) []byte {
 	buffer := make([]byte, binary.MaxVarintLen32*2+binary.MaxVarintLen64)
-	var index int = 0
+	index := 0
 	index += binary.PutVarint(buffer[index:], int64(lrp.FileID))
 	index += binary.PutVarint(buffer[index:], lrp.Offset)
 	index += binary.PutVarint(buffer[index:], int64(lrp.Size))
@@ -154,12 +154,12 @@ func EncodeLogRecordPosition(lrp *LogRecordPosition) []byte {
 
 // DecodeLogRecordPosition decodes a byte array into a DecodeLogRecordPosition
 func DecodeLogRecordPosition(buffer []byte) *LogRecordPosition {
-	var index int = 0
+	index := 0
 	fileID, n := binary.Varint(buffer[index:])
 	index += n
 	offset, n := binary.Varint(buffer[index:])
 	index += n
-	size, n := binary.Varint(buffer[index:])
+	size, _ := binary.Varint(buffer[index:])
 	lrp := &LogRecordPosition{
 		FileID: uint32(fileID),
 		Offset: offset,

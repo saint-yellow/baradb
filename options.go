@@ -8,6 +8,7 @@ type DBOptions struct {
 	Directory string
 
 	// Maximum size of every single data file (uint: Byte).
+	//
 	// It should be greater than 0.
 	MaxDataFileSize int64
 
@@ -17,18 +18,23 @@ type DBOptions struct {
 	// IndexerType indicates the type of the indexer of the DB engine
 	IndexerType indexer.IndexerType
 
-	// SyncThreshold indicates a threshold for persisting data
-	// It should equals 0 or be greater than 0 (uint: Byte)
-	// When the DB engine wrote bytes more than this threshold, the DB engine will sync the wirtten bytes to the acitve data file
+	// SyncThreshold indicates a threshold for persisting data.
+	//
+	// It should equals 0 or be greater than 0 (uint: Byte).
+	//
+	// When the DB engine wrote bytes more than this threshold, the DB engine will sync the wirtten bytes to the acitve data file.
 	SyncThreshold uint
 
 	// MMapAtStartup indicates whether load memory mapping while starting up the DB engine
 	MMapAtStartup bool
 
 	// MergenceThreshold indicates a threshold for merging data.
+	//
 	// When proportion of the invalid data in the DB engine is greater than this threshold,
 	// the DB engine will merge all its data.
+	//
 	// The value of this threshold should be between 0 and 1.
+	//
 	// If the value is 0, then this threshold is disabled and the DB engine will not merge its data.
 	MergenceThreshold float64
 }

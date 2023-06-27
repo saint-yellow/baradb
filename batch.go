@@ -126,10 +126,11 @@ func (wb *WriteBatch) Commit() error {
 		lrp := positions[string(lr.Key)]
 		var oldLRP *data.LogRecordPosition
 
-		if lr.Type == data.NormalLogRecord {
-			oldLRP = wb.db.indexer.Put(lr.Key, lrp)
-		} else if lr.Type == data.DeletedLogRecord {
+		switch lr.Type {
+		case data.DeletedLogRecord:
 			oldLRP, _ = wb.db.indexer.Delete(lr.Key)
+		case data.NormalLogRecord:
+			oldLRP = wb.db.indexer.Put(lr.Key, lrp)
 		}
 
 		if oldLRP != nil {

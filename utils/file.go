@@ -2,14 +2,16 @@ package utils
 
 import (
 	"io/fs"
+	"os"
 	"path/filepath"
+	"strings"
 	"syscall"
 )
 
 // DirSize returns the total size (unit: B) of all files in a given directory.
 func DirSize(d string) (int64, error) {
 	var size int64
-	err := filepath.Walk(d, func(path string, info fs.FileInfo, err error) error {
+	err := filepath.Walk(d, func(_ string, info fs.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -36,4 +38,54 @@ func AvailableDiskSize() (int64, error) {
 
 	size := int64(stat.Bavail) * stat.Bsize
 	return size, nil
+}
+
+// CopyDir copy the data files in a given source directory to a given destination directory
+//
+// Files excluded will be ignored.
+func CopyDir(src, dst string, exclude []string) error {
+	var err error
+
+	// Make sure the destination directory is exist
+	_, err = os.Stat(dst)
+	if os.IsNotExist(err) {
+		err = os.MkdirAll(dst, os.ModePerm)
+		if err != nil {
+			return err
+		}
+	}
+
+	err = filepath.Walk(src, func(path string, info fs.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		fileName := strings.Replace(path, src, "", 1)
+		if fileName == "" {
+			return nil
+		}
+
+		for _, e := range exclude {
+			matched, err := filepath.Match(e, fileName)
+			if err != nil {
+				return err
+			}
+			if matched {
+				return nil
+			}
+		}
+
+		if info.IsDir() {
+			return os.MkdirAll(filepath.Join(dst, fileName), info.Mode())
+		}
+
+		data, err := os.ReadFile(filepath.Join(src, fileName))
+		if err != nil {
+			return err
+		}
+
+		return os.WriteFile(filepath.Join(dst, fileName), data, info.Mode())
+	})
+
+	return err
 }
