@@ -1,7 +1,6 @@
 package baradb
 
 import (
-	"encoding/binary"
 	"sync"
 	"sync/atomic"
 
@@ -94,7 +93,7 @@ func (wb *WriteBatch) Commit() error {
 	positions := make(map[string]*data.LogRecordPosition)
 	for _, lr := range wb.pendingWrites {
 		lrp, err := wb.db.appendLogRecord(&data.LogRecord{
-			Key:   encodeLogRecordKeyWithTranNo(lr.Key, transNo),
+			Key:   data.EncodeKey(lr.Key, transNo),
 			Value: lr.Value,
 			Type:  lr.Type,
 		}, false)
@@ -106,7 +105,7 @@ func (wb *WriteBatch) Commit() error {
 
 	// Add a log record that means this transaction is finished
 	_, err := wb.db.appendLogRecord(&data.LogRecord{
-		Key:  encodeLogRecordKeyWithTranNo(tranFinishedKey, transNo),
+		Key:  data.EncodeKey(tranFinishedKey, transNo),
 		Type: data.TransactionFinishedLogRecord,
 	}, false)
 	if err != nil {
@@ -142,23 +141,4 @@ func (wb *WriteBatch) Commit() error {
 	wb.pendingWrites = make(map[string]*data.LogRecord)
 
 	return nil
-}
-
-// encodeLogRecoedKeyWithTranNo encodes a key of a log record and a transaction serial number
-func encodeLogRecordKeyWithTranNo(key []byte, tranNo uint64) []byte {
-	encodedTranNo := make([]byte, binary.MaxVarintLen64)
-	n := binary.PutUvarint(encodedTranNo[:], tranNo)
-
-	encodedKey := make([]byte, n+len(key))
-	copy(encodedKey[:n], encodedTranNo[:n])
-	copy(encodedKey[n:], key)
-
-	return encodedKey
-}
-
-// decodeLogRecordKeyWithTranNo decodes a key to get a key of a log record and a transaction serial number
-func decodeLogRecordKeyWithTranNo(key []byte) ([]byte, uint64) {
-	tranNo, n := binary.Uvarint(key)
-	decodedKey := key[n:]
-	return decodedKey, tranNo
 }

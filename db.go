@@ -164,7 +164,7 @@ func (db *DB) Put(key, value []byte) error {
 	}
 
 	lr := &data.LogRecord{
-		Key:   encodeLogRecordKeyWithTranNo(key, nonTranNo),
+		Key:   data.EncodeKey(key, nonTranNo),
 		Value: value,
 		Type:  data.NormalLogRecord,
 	}
@@ -238,7 +238,7 @@ func (db *DB) Delete(key []byte) error {
 	}
 
 	lr := &data.LogRecord{
-		Key:  encodeLogRecordKeyWithTranNo(key, nonTranNo),
+		Key:  data.EncodeKey(key, nonTranNo),
 		Type: data.DeletedLogRecord,
 	}
 
@@ -444,7 +444,7 @@ func (db *DB) loadIndexFromDataFiles() error {
 			}
 
 			// Decode the key of the log record to get the real key and the transaction serial number
-			lrKey, tranNo := decodeLogRecordKeyWithTranNo(lr.Key)
+			lrKey, tranNo := data.DecodeKey(lr.Key)
 			if tranNo == nonTranNo {
 				// If transaction serial number is 0, then update the in-memory index directly
 				// Because it is not a transactional operation

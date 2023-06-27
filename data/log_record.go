@@ -167,3 +167,28 @@ func DecodeLogRecordPosition(buffer []byte) *LogRecordPosition {
 	}
 	return lrp
 }
+
+// EncodeKey encodes a key and a transaction serial number
+//
+// The given key is usually from a log record
+func EncodeKey(key []byte, tranNo uint64) []byte {
+	encodedTranNo := make([]byte, binary.MaxVarintLen64)
+	n := binary.PutUvarint(encodedTranNo[:], tranNo)
+
+	encodedKey := make([]byte, n+len(key))
+	copy(encodedKey[:n], encodedTranNo[:n])
+	copy(encodedKey[n:], key)
+
+	return encodedKey
+}
+
+// DecodeKey decodes the given key to get another record and a transaction serial number
+//
+// Usually the given key has been encoded.
+//
+// As an output, the decoded key is the one of a certain log record.
+func DecodeKey(key []byte) ([]byte, uint64) {
+	tranNo, n := binary.Uvarint(key)
+	decodedKey := key[n:]
+	return decodedKey, tranNo
+}
