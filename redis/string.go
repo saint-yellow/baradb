@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// Set
+// Set redis SET
 func (ds *DS) Set(key []byte, value []byte, ttl time.Duration) error {
 	if len(value) == 0 {
 		return nil
@@ -31,7 +31,7 @@ func (ds *DS) Set(key []byte, value []byte, ttl time.Duration) error {
 	return ds.db.Put(key, encValue)
 }
 
-// Get
+// Get redis GET
 func (ds *DS) Get(key []byte) ([]byte, error) {
 	encValue, err := ds.db.Get(key)
 	if err != nil {
