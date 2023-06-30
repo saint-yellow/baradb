@@ -5,6 +5,7 @@ import (
 	"sync/atomic"
 
 	"github.com/saint-yellow/baradb/data"
+	"github.com/saint-yellow/baradb/indexer"
 )
 
 // nonTranNo This is not a transaction serial number
@@ -19,6 +20,21 @@ type WriteBatch struct {
 	db            *DB                        // DB engine
 	options       WriteBatchOptions          // options for batch writing
 	pendingWrites map[string]*data.LogRecord // data (log records) pending to be writen
+}
+
+// NewWriteBatch initializes a write batch in the DB engine
+func (db *DB) NewWriteBatch(options WriteBatchOptions) *WriteBatch {
+	if db.options.IndexerType == indexer.BPtree && !db.tranNoFileExists && !db.isFirstLaunch {
+		panic("Can not use a write batch since the tran-no file does not exist")
+	}
+
+	wb := &WriteBatch{
+		mu:            new(sync.RWMutex),
+		db:            db,
+		options:       options,
+		pendingWrites: make(map[string]*data.LogRecord),
+	}
+	return wb
 }
 
 // Put writes data

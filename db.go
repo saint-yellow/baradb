@@ -561,17 +561,6 @@ func (db *DB) resetIOHandler() error {
 	return nil
 }
 
-// NewItrerator initializes an iterator of DB engine
-func (db *DB) NewItrerator(options indexer.IteratorOptions) *Iterator {
-	iterator := &Iterator{
-		indexIterator: db.indexer.Iterator(options.Reverse),
-		db:            db,
-		options:       options,
-	}
-
-	return iterator
-}
-
 // ListKeys gets all keys in the DB engine
 func (db *DB) ListKeys() [][]byte {
 	iter := db.indexer.Iterator(false)
@@ -682,21 +671,6 @@ func (db *DB) Sync() error {
 	// The inactive data file was already been synced before
 	// So the current active data file is the only thing to handle
 	return db.activeFile.Sync()
-}
-
-// NewWriteBatch initializes a write batch in the DB engine
-func (db *DB) NewWriteBatch(options WriteBatchOptions) *WriteBatch {
-	if db.options.IndexerType == indexer.BPtree && !db.tranNoFileExists && !db.isFirstLaunch {
-		panic("Can not use a write batch since the tran-no file does not exist")
-	}
-
-	wb := &WriteBatch{
-		mu:            new(sync.RWMutex),
-		db:            db,
-		options:       options,
-		pendingWrites: make(map[string]*data.LogRecord),
-	}
-	return wb
 }
 
 // Stat returns statistical information of the DB engine

@@ -13,6 +13,17 @@ type Iterator struct {
 	options       indexer.IteratorOptions // options of an iterator of an indexer
 }
 
+// NewItrerator initializes an iterator of DB engine
+func (db *DB) NewItrerator(options indexer.IteratorOptions) *Iterator {
+	iterator := &Iterator{
+		indexIterator: db.indexer.Iterator(options.Reverse),
+		db:            db,
+		options:       options,
+	}
+
+	return iterator
+}
+
 func (it *Iterator) Rewind() {
 	it.indexIterator.Rewind()
 	it.skipToNext()
