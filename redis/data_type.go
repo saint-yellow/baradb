@@ -8,5 +8,5 @@ const (
 	Hash
 	Set
 	List
-	Zset
+	ZSet
 )
