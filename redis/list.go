@@ -12,7 +12,7 @@ type listInternalKey struct {
 	index   uint64
 }
 
-func encodeListInternalKey(lk *listInternalKey) []byte {
+func (lk *listInternalKey) encode() []byte {
 	buffer := make([]byte, len(lk.key)+8+8)
 
 	// key
@@ -45,7 +45,7 @@ func (ds *DS) listPush(key, element []byte, isLeft bool) (uint32, error) {
 	} else {
 		lk.index = md.tail
 	}
-	encKey := encodeListInternalKey(lk)
+	encKey := lk.encode()
 
 	wb := ds.db.NewWriteBatch(baradb.DefaultWriteBatchOptions)
 	md.size++
@@ -91,7 +91,7 @@ func (ds *DS) listPop(key []byte, isLeft bool) ([]byte, error) {
 	} else {
 		lk.index = md.tail - 1
 	}
-	encKey := encodeListInternalKey(lk)
+	encKey := lk.encode()
 
 	element, err := ds.db.Get(encKey)
 	if err != nil {

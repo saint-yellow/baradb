@@ -12,8 +12,8 @@ type setInternalKey struct {
 	member  []byte
 }
 
-// encodeSetInternalKey encodes a set internal key to a byte array
-func encodeSetInternalKey(sk *setInternalKey) []byte {
+// encode encodes a set internal key to a byte array
+func (sk *setInternalKey) encode() []byte {
 	buffer := make([]byte, len(sk.key)+8+len(sk.member)+4)
 
 	// key
@@ -47,7 +47,7 @@ func (ds *DS) SAdd(key []byte, member []byte) (bool, error) {
 		version: md.version,
 		member:  member,
 	}
-	encKey := encodeSetInternalKey(sk)
+	encKey := sk.encode()
 
 	var ok bool
 	_, err = ds.db.Get(encKey)
@@ -81,7 +81,7 @@ func (ds *DS) SIsMember(key, member []byte) (bool, error) {
 		version: md.version,
 		member:  member,
 	}
-	encKey := encodeSetInternalKey(sk)
+	encKey := sk.encode()
 
 	_, err = ds.db.Get(encKey)
 	if err != nil {
@@ -116,7 +116,7 @@ func (ds *DS) SRem(key, member []byte) (bool, error) {
 		version: md.version,
 		member:  member,
 	}
-	encKey := encodeSetInternalKey(sk)
+	encKey := sk.encode()
 
 	_, err = ds.db.Get(encKey)
 	if err == baradb.ErrKeyNotFound {

@@ -12,7 +12,7 @@ type hashInternalKey struct {
 	field   []byte
 }
 
-func encodeHashInternalKey(hk *hashInternalKey) []byte {
+func (hk *hashInternalKey) encode() []byte {
 	buffer := make([]byte, len(hk.key)+8+len(hk.field))
 
 	// key
@@ -42,7 +42,7 @@ func (ds *DS) HSet(key, field, value []byte) (bool, error) {
 		version: md.version,
 		field:   field,
 	}
-	encKey := encodeHashInternalKey(hk)
+	encKey := hk.encode()
 
 	exist := true
 	if _, err := ds.db.Get(encKey); err == baradb.ErrKeyNotFound {
@@ -78,7 +78,7 @@ func (ds *DS) HGet(key, field []byte) ([]byte, error) {
 		version: md.version,
 		field:   field,
 	}
-	encKey := encodeHashInternalKey(hk)
+	encKey := hk.encode()
 
 	return ds.db.Get(encKey)
 }
@@ -102,7 +102,7 @@ func (ds *DS) HDel(key, field []byte) (bool, error) {
 		version: md.version,
 		field:   field,
 	}
-	encKey := encodeHashInternalKey(hk)
+	encKey := hk.encode()
 
 	exist := true
 	_, err = ds.db.Get(encKey)
