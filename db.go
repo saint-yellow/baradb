@@ -363,7 +363,7 @@ func (db *DB) loadDataFiles() error {
 	for i, fileID := range fileIDs {
 		ioHandlerType := io_handler.FileIOHandler
 		if db.options.MMapAtStartup {
-			ioHandlerType = io_handler.MMapIOHandler
+			ioHandlerType = io_handler.MemoryMappedIOHandler
 		}
 		file, err := data.OpenDataFile(db.options.Directory, uint32(fileID), ioHandlerType)
 		if err != nil {

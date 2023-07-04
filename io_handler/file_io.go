@@ -4,37 +4,37 @@ import (
 	"os"
 )
 
-// FileIO Standard file I/O
-type FileIO struct {
+// fileIO Standard file I/O
+type fileIO struct {
 	fd *os.File // File descriptor
 }
 
-func NewFileIO(filePath string) (*FileIO, error) {
+func newFileIO(filePath string) (*fileIO, error) {
 	fd, err := os.OpenFile(filePath, os.O_CREATE|os.O_RDWR|os.O_APPEND, DataFilePermission)
 	if err != nil {
 		return nil, err
 	}
-	fio := &FileIO{fd: fd}
+	fio := &fileIO{fd: fd}
 	return fio, nil
 }
 
-func (fio *FileIO) Read(data []byte, offset int64) (int, error) {
+func (fio *fileIO) Read(data []byte, offset int64) (int, error) {
 	return fio.fd.ReadAt(data, offset)
 }
 
-func (fio *FileIO) Write(data []byte) (int, error) {
+func (fio *fileIO) Write(data []byte) (int, error) {
 	return fio.fd.Write(data)
 }
 
-func (fio *FileIO) Sync() error {
+func (fio *fileIO) Sync() error {
 	return fio.fd.Sync()
 }
 
-func (fio *FileIO) Close() error {
+func (fio *fileIO) Close() error {
 	return fio.fd.Close()
 }
 
-func (fio *FileIO) Size() (int64, error) {
+func (fio *fileIO) Size() (int64, error) {
 	stat, err := fio.fd.Stat()
 	if err != nil {
 		return 0, err

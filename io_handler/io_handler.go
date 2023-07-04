@@ -25,16 +25,16 @@ type IOHandlerType = int8
 
 const (
 	FileIOHandler IOHandlerType = iota + 1
-	MMapIOHandler
+	MemoryMappedIOHandler
 )
 
 // NewIOHandler Constructs an IOHandler, such as FileIO
 func NewIOHandler(t IOHandlerType, filePath string) (IOHandler, error) {
 	switch t {
 	case FileIOHandler:
-		return NewFileIO(filePath)
-	case MMapIOHandler:
-		return NewMMap(filePath)
+		return newFileIO(filePath)
+	case MemoryMappedIOHandler:
+		return newMemoryMappedIO(filePath)
 	default:
 		panic("Unsupproted I/O handler type")
 	}

@@ -6,13 +6,13 @@ import (
 	"golang.org/x/exp/mmap"
 )
 
-// MMap in-memory mapper
-type MMap struct {
+// memoryMappedIO represents a memory-mapped I/O handler
+type memoryMappedIO struct {
 	readerAt *mmap.ReaderAt
 }
 
-// NewMMap initializes a MMap
-func NewMMap(filePath string) (*MMap, error) {
+// newMemoryMappedIO initializes a memory-mapped I/O handler
+func newMemoryMappedIO(filePath string) (*memoryMappedIO, error) {
 	_, err := os.OpenFile(filePath, os.O_CREATE, DataFilePermission)
 	if err != nil {
 		return nil, err
@@ -22,33 +22,33 @@ func NewMMap(filePath string) (*MMap, error) {
 		return nil, err
 	}
 
-	m := &MMap{
+	m := &memoryMappedIO{
 		readerAt: readerAt,
 	}
 	return m, nil
 }
 
 // Read Read corresponding data from the specific position of a file
-func (m *MMap) Read(b []byte, n int64) (int, error) {
+func (m *memoryMappedIO) Read(b []byte, n int64) (int, error) {
 	return m.readerAt.ReadAt(b, n)
 }
 
 // Write Write data to a file
-func (m *MMap) Write(b []byte) (int, error) {
+func (m *memoryMappedIO) Write(b []byte) (int, error) {
 	panic("Operation unsupported")
 }
 
 // Sync Persistent data
-func (m *MMap) Sync() error {
+func (m *memoryMappedIO) Sync() error {
 	panic("Operation unsupported")
 }
 
 // Close Close a file
-func (m *MMap) Close() error {
+func (m *memoryMappedIO) Close() error {
 	return m.readerAt.Close()
 }
 
 // Size Get the size of a data file (unit: B)
-func (m *MMap) Size() (int64, error) {
+func (m *memoryMappedIO) Size() (int64, error) {
 	return int64(m.readerAt.Len()), nil
 }

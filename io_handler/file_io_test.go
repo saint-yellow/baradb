@@ -18,14 +18,14 @@ func destroyFile() {
 }
 
 func TestNewFileIO(t *testing.T) {
-	fio, err := NewFileIO(filePath)
+	fio, err := newFileIO(filePath)
 	defer destroyFile()
 	assert.Nil(t, err)
 	assert.NotNil(t, fio)
 }
 
 func TestFileIO_Write(t *testing.T) {
-	fio, _ := NewFileIO(filePath)
+	fio, _ := newFileIO(filePath)
 	defer destroyFile()
 
 	res, err := fio.Write(nil)
@@ -46,7 +46,7 @@ func TestFileIO_Write(t *testing.T) {
 }
 
 func TestFileIO_Read(t *testing.T) {
-	fio, _ := NewFileIO(filePath)
+	fio, _ := newFileIO(filePath)
 	defer destroyFile()
 
 	fio.Write([]byte("114514"))
@@ -66,7 +66,7 @@ func TestFileIO_Read(t *testing.T) {
 }
 
 func TestFileIO_Sync(t *testing.T) {
-	fio, _ := NewFileIO(filePath)
+	fio, _ := newFileIO(filePath)
 	defer destroyFile()
 
 	fio.Write([]byte("114514"))
@@ -77,7 +77,7 @@ func TestFileIO_Sync(t *testing.T) {
 }
 
 func TestFileIO_Close(t *testing.T) {
-	fio, _ := NewFileIO(filePath)
+	fio, _ := newFileIO(filePath)
 	defer destroyFile()
 
 	fio.Write([]byte("114514"))

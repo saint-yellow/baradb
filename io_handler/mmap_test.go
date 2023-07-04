@@ -7,16 +7,16 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestMMap_New(t *testing.T) {
-	mmap, err := NewMMap(filePath)
+func TestMemoryMappedIO_New(t *testing.T) {
+	mmap, err := newMemoryMappedIO(filePath)
 	defer destroyFile()
 
 	assert.Nil(t, err)
 	assert.NotNil(t, mmap)
 }
 
-func TestMMap_Read(t *testing.T) {
-	mmap, _ := NewMMap(filePath)
+func TestMemoryMappedIO_Read(t *testing.T) {
+	mmap, _ := newMemoryMappedIO(filePath)
 	defer destroyFile()
 
 	b1 := make([]byte, 6)
@@ -24,11 +24,11 @@ func TestMMap_Read(t *testing.T) {
 	assert.Zero(t, n)
 	assert.Equal(t, io.EOF, err)
 
-	fileIO, _ := NewFileIO(filePath)
+	fileIO, _ := newFileIO(filePath)
 	fileIO.Write([]byte("114514"))
 	fileIO.Write([]byte("1919810"))
 
-	mmap, _ = NewMMap(filePath)
+	mmap, _ = newMemoryMappedIO(filePath)
 	n, err = mmap.Read(b1, 0)
 	assert.Nil(t, err)
 	assert.Equal(t, len(b1), n)
@@ -41,37 +41,37 @@ func TestMMap_Read(t *testing.T) {
 	assert.Equal(t, "1919810", string(b2))
 }
 
-func TestMMap_Close(t *testing.T) {
-	mmap, _ := NewMMap(filePath)
+func TestMemoryMappedIO_Close(t *testing.T) {
+	mmap, _ := newMemoryMappedIO(filePath)
 	defer destroyFile()
 
 	err := mmap.Close()
 	assert.Nil(t, err)
 
-	fileIO, _ := NewFileIO(filePath)
-	mmap, _ = NewMMap(filePath)
+	fileIO, _ := newFileIO(filePath)
+	mmap, _ = newMemoryMappedIO(filePath)
 	err = mmap.Close()
 	assert.Nil(t, err)
 
 	fileIO.Write([]byte("114514"))
-	mmap, _ = NewMMap(filePath)
+	mmap, _ = newMemoryMappedIO(filePath)
 	err = mmap.Close()
 	assert.Nil(t, err)
 
 	fileIO.Sync()
-	mmap, _ = NewMMap(filePath)
+	mmap, _ = newMemoryMappedIO(filePath)
 	err = mmap.Close()
 	assert.Nil(t, err)
 
 	fileIO.Close()
-	mmap, _ = NewMMap(filePath)
+	mmap, _ = newMemoryMappedIO(filePath)
 	err = mmap.Close()
 	assert.Nil(t, err)
 }
 
-func TestMMap_Size(t *testing.T) {
-	mmap, _ := NewMMap(filePath)
-	fileIO, _ := NewFileIO(filePath)
+func TestMemoryMappedIO_Size(t *testing.T) {
+	mmap, _ := newMemoryMappedIO(filePath)
+	fileIO, _ := newFileIO(filePath)
 	defer destroyFile()
 
 	size, err := mmap.Size()
@@ -82,13 +82,13 @@ func TestMMap_Size(t *testing.T) {
 	b2 := []byte("1919810")
 
 	fileIO.Write(b1)
-	mmap, _ = NewMMap(filePath)
+	mmap, _ = newMemoryMappedIO(filePath)
 	size, err = mmap.Size()
 	assert.Nil(t, err)
 	assert.Equal(t, len(b1), int(size))
 
 	fileIO.Write(b2)
-	mmap, _ = NewMMap(filePath)
+	mmap, _ = newMemoryMappedIO(filePath)
 	size, err = mmap.Size()
 	assert.Nil(t, err)
 	assert.Equal(t, len(b1)+len(b2), int(size))
