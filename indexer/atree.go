@@ -8,15 +8,15 @@ import (
 	"github.com/saint-yellow/baradb/data"
 )
 
-// ARTree Adaptive Ratio Tree
-type ARTree struct {
+// arTree Adaptive Ratio Tree
+type arTree struct {
 	tree art.Tree
 	lock *sync.RWMutex
 }
 
-// NewARTree initializes an Adaptive Radix Tree indexer
-func NewARTree() *ARTree {
-	t := &ARTree{
+// NewarTree initializes an Adaptive Radix Tree indexer
+func newARTree() *arTree {
+	t := &arTree{
 		tree: art.New(),
 		lock: new(sync.RWMutex),
 	}
@@ -24,7 +24,7 @@ func NewARTree() *ARTree {
 }
 
 // Put stores location of the corresponding data of the key in the indexer
-func (t *ARTree) Put(key []byte, position *data.LogRecordPosition) *data.LogRecordPosition {
+func (t *arTree) Put(key []byte, position *data.LogRecordPosition) *data.LogRecordPosition {
 	t.lock.Lock()
 	oldValue, updated := t.tree.Insert(key, position)
 	t.lock.Unlock()
@@ -37,7 +37,7 @@ func (t *ARTree) Put(key []byte, position *data.LogRecordPosition) *data.LogReco
 }
 
 // Get gets the location of the corresponding data af the key in the indexer
-func (t *ARTree) Get(key []byte) *data.LogRecordPosition {
+func (t *arTree) Get(key []byte) *data.LogRecordPosition {
 	t.lock.RLock()
 	defer t.lock.RUnlock()
 
@@ -50,7 +50,7 @@ func (t *ARTree) Get(key []byte) *data.LogRecordPosition {
 }
 
 // Delete deletes the location of the corresponding data of the key in the indexer
-func (t *ARTree) Delete(key []byte) (*data.LogRecordPosition, bool) {
+func (t *arTree) Delete(key []byte) (*data.LogRecordPosition, bool) {
 	t.lock.Lock()
 	oldValue, deleted := t.tree.Delete(key)
 	t.lock.Unlock()
@@ -63,7 +63,7 @@ func (t *ARTree) Delete(key []byte) (*data.LogRecordPosition, bool) {
 }
 
 // Size returns how many key/value pairs in the indexer
-func (t *ARTree) Size() int {
+func (t *arTree) Size() int {
 	t.lock.RLock()
 	defer t.lock.RUnlock()
 
@@ -71,13 +71,13 @@ func (t *ARTree) Size() int {
 }
 
 // Iterator returns an iterator
-func (t *ARTree) Iterator(reverse bool) Iterator {
+func (t *arTree) Iterator(reverse bool) Iterator {
 	t.lock.RLock()
 	defer t.lock.RUnlock()
 
-	return NewARTreeIterator(t.tree, reverse)
+	return newARTreeIterator(t.tree, reverse)
 }
 
-func (t *ARTree) Close() error {
+func (t *arTree) Close() error {
 	return nil
 }

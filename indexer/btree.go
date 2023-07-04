@@ -9,21 +9,22 @@ import (
 )
 
 // BTree A concrete indexer that implements Indexer interface by ecapsulating Google's BTree library
-type BTree struct {
+type bTree struct {
 	tree *btree.BTree
 	lock *sync.RWMutex
 }
 
 // Constructor of BTree
-func NewBTree() *BTree {
-	return &BTree{
+func newBTree() *bTree {
+	bt := &bTree{
 		tree: btree.New(32),
 		lock: new(sync.RWMutex),
 	}
+	return bt
 }
 
 // Put puts data to B tree indexer
-func (bt *BTree) Put(key []byte, position *data.LogRecordPosition) *data.LogRecordPosition {
+func (bt *bTree) Put(key []byte, position *data.LogRecordPosition) *data.LogRecordPosition {
 	x := &Item{
 		Key:      key,
 		Position: position,
@@ -38,7 +39,7 @@ func (bt *BTree) Put(key []byte, position *data.LogRecordPosition) *data.LogReco
 }
 
 // Get data from BTree
-func (bt *BTree) Get(key []byte) *data.LogRecordPosition {
+func (bt *bTree) Get(key []byte) *data.LogRecordPosition {
 	x := &Item{
 		Key: key,
 	}
@@ -50,12 +51,12 @@ func (bt *BTree) Get(key []byte) *data.LogRecordPosition {
 }
 
 // Size returns how many key/value pairs in the BTree
-func (bt *BTree) Size() int {
+func (bt *bTree) Size() int {
 	return bt.tree.Len()
 }
 
 // Delete deletes a key from the B tree indexer
-func (bt *BTree) Delete(key []byte) (*data.LogRecordPosition, bool) {
+func (bt *bTree) Delete(key []byte) (*data.LogRecordPosition, bool) {
 	x := &Item{
 		Key: key,
 	}
@@ -68,7 +69,7 @@ func (bt *BTree) Delete(key []byte) (*data.LogRecordPosition, bool) {
 	return y.(*Item).Position, true
 }
 
-func (bt *BTree) Iterator(reverse bool) Iterator {
+func (bt *bTree) Iterator(reverse bool) Iterator {
 	if bt.tree == nil {
 		return nil
 	}
@@ -76,9 +77,9 @@ func (bt *BTree) Iterator(reverse bool) Iterator {
 	bt.lock.Lock()
 	defer bt.lock.Unlock()
 
-	return NewBTreeIterator(bt.tree, reverse)
+	return newBTreeIterator(bt.tree, reverse)
 }
 
-func (bt *BTree) Close() error {
+func (bt *bTree) Close() error {
 	return nil
 }

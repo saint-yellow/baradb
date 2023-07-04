@@ -10,13 +10,13 @@ import (
 )
 
 // An iterator of a B Tree indexer
-type BTreeIterator struct {
+type bTreeIterator struct {
 	currentIndex int     // current iterated location
 	reverse      bool    // whether enable reverse iteration
 	values       []*Item // locations
 }
 
-func NewBTreeIterator(tree *btree.BTree, reverse bool) *BTreeIterator {
+func newBTreeIterator(tree *btree.BTree, reverse bool) *bTreeIterator {
 	var index int
 	values := make([]*Item, tree.Len())
 
@@ -32,7 +32,7 @@ func NewBTreeIterator(tree *btree.BTree, reverse bool) *BTreeIterator {
 		tree.Ascend(saveValues)
 	}
 
-	iter := &BTreeIterator{
+	iter := &bTreeIterator{
 		currentIndex: 0,
 		reverse:      reverse,
 		values:       values,
@@ -40,11 +40,11 @@ func NewBTreeIterator(tree *btree.BTree, reverse bool) *BTreeIterator {
 	return iter
 }
 
-func (iter *BTreeIterator) Rewind() {
+func (iter *bTreeIterator) Rewind() {
 	iter.currentIndex = 0
 }
 
-func (iter *BTreeIterator) Seek(key []byte) {
+func (iter *bTreeIterator) Seek(key []byte) {
 	if iter.reverse {
 		iter.currentIndex = sort.Search(len(iter.values), func(i int) bool {
 			return bytes.Compare(iter.values[i].Key, key) <= 0
@@ -56,26 +56,26 @@ func (iter *BTreeIterator) Seek(key []byte) {
 	}
 }
 
-func (iter *BTreeIterator) Next() {
+func (iter *bTreeIterator) Next() {
 	iter.currentIndex += 1
 }
 
-func (iter *BTreeIterator) Valid() bool {
+func (iter *bTreeIterator) Valid() bool {
 	return iter.currentIndex >= 0 && iter.currentIndex < len(iter.values)
 }
 
-func (iter *BTreeIterator) Key() []byte {
+func (iter *bTreeIterator) Key() []byte {
 	return iter.values[iter.currentIndex].Key
 }
 
-func (iter *BTreeIterator) Value() *data.LogRecordPosition {
+func (iter *bTreeIterator) Value() *data.LogRecordPosition {
 	return iter.values[iter.currentIndex].Position
 }
 
-func (iter *BTreeIterator) Size() int {
+func (iter *bTreeIterator) Size() int {
 	return len(iter.values)
 }
 
-func (iter *BTreeIterator) Close() {
+func (iter *bTreeIterator) Close() {
 	iter.values = nil
 }

@@ -12,12 +12,12 @@ const BPlusTreeIndexFileName = "bplustree-index"
 
 var IndexBucketName = []byte("baradb-index")
 
-// BPlusTree represents a B+ Tree indexer
-type BPlusTree struct {
+// bplusTree represents a B+ Tree indexer
+type bplusTree struct {
 	tree *bbolt.DB
 }
 
-func NewBPlusTree(directory string, syncWrites bool) *BPlusTree {
+func newBPlusTree(directory string, syncWrites bool) *bplusTree {
 	opts := bbolt.DefaultOptions
 	opts.NoSync = !syncWrites
 	db, err := bbolt.Open(filepath.Join(directory, BPlusTreeIndexFileName), 0644, opts)
@@ -33,14 +33,14 @@ func NewBPlusTree(directory string, syncWrites bool) *BPlusTree {
 		panic("Failed to create a bucket in a B+ tree")
 	}
 
-	t := &BPlusTree{
+	t := &bplusTree{
 		tree: db,
 	}
 	return t
 }
 
 // Put stores location of the corresponding data of the key in the indexer
-func (t *BPlusTree) Put(key []byte, position *data.LogRecordPosition) *data.LogRecordPosition {
+func (t *bplusTree) Put(key []byte, position *data.LogRecordPosition) *data.LogRecordPosition {
 	var oldValue []byte
 	err := t.tree.Update(func(tx *bbolt.Tx) error {
 		bucket := tx.Bucket(IndexBucketName)
@@ -58,7 +58,7 @@ func (t *BPlusTree) Put(key []byte, position *data.LogRecordPosition) *data.LogR
 }
 
 // Get gets the location of the corresponding data af the key in the indexer
-func (t *BPlusTree) Get(key []byte) *data.LogRecordPosition {
+func (t *bplusTree) Get(key []byte) *data.LogRecordPosition {
 	var lrp *data.LogRecordPosition
 	err := t.tree.View(func(tx *bbolt.Tx) error {
 		bucket := tx.Bucket(IndexBucketName)
@@ -75,7 +75,7 @@ func (t *BPlusTree) Get(key []byte) *data.LogRecordPosition {
 }
 
 // Delete deletes the location of the corresponding data of the key in the indexer
-func (t *BPlusTree) Delete(key []byte) (*data.LogRecordPosition, bool) {
+func (t *bplusTree) Delete(key []byte) (*data.LogRecordPosition, bool) {
 	var ok bool
 	var oldValue []byte
 	err := t.tree.Update(func(tx *bbolt.Tx) error {
@@ -99,7 +99,7 @@ func (t *BPlusTree) Delete(key []byte) (*data.LogRecordPosition, bool) {
 }
 
 // Size returns how many key/value pairs in the indexer
-func (t *BPlusTree) Size() int {
+func (t *bplusTree) Size() int {
 	var size int
 	err := t.tree.View(func(tx *bbolt.Tx) error {
 		bucket := tx.Bucket(IndexBucketName)
@@ -113,10 +113,10 @@ func (t *BPlusTree) Size() int {
 }
 
 // Iterator returns an iterator
-func (t *BPlusTree) Iterator(reverse bool) Iterator {
-	return NewBPlusTreeIterator(t.tree, reverse)
+func (t *bplusTree) Iterator(reverse bool) Iterator {
+	return newBPlusTreeIterator(t.tree, reverse)
 }
 
-func (t *BPlusTree) Close() error {
+func (t *bplusTree) Close() error {
 	return t.tree.Close()
 }

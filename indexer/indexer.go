@@ -52,11 +52,11 @@ const (
 func NewIndexer(t IndexerType, d string, syncWrites bool) Indexer {
 	switch t {
 	case Btree:
-		return NewBTree()
+		return newBTree()
 	case ARtree:
-		return NewARTree()
+		return newARTree()
 	case BPtree:
-		return NewBPlusTree(d, syncWrites)
+		return newBPlusTree(d, syncWrites)
 	default:
 		panic("Unsupported index type")
 	}

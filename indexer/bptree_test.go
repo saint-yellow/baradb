@@ -27,7 +27,7 @@ func TestBPlusTree_New(t *testing.T) {
 	makeDirectory()
 	defer removeDirectory()
 
-	tree := NewBPlusTree(directory, false)
+	tree := newBPlusTree(directory, false)
 	assert.NotNil(t, tree)
 }
 
@@ -35,7 +35,7 @@ func TestBPlusTree_Put(t *testing.T) {
 	makeDirectory()
 	defer removeDirectory()
 
-	tree := NewBPlusTree(directory, false)
+	tree := newBPlusTree(directory, false)
 
 	var lrp *data.LogRecordPosition
 	lrp = tree.Put([]byte("114"), &data.LogRecordPosition{FileID: 114, Offset: 0})
@@ -48,7 +48,7 @@ func TestBPlusTree_Get(t *testing.T) {
 	makeDirectory()
 	defer removeDirectory()
 
-	tree := NewBPlusTree(directory, false)
+	tree := newBPlusTree(directory, false)
 
 	var lrp *data.LogRecordPosition
 	lrp = tree.Get([]byte("114"))
@@ -65,7 +65,7 @@ func TestBPlusTree_Delete(t *testing.T) {
 	makeDirectory()
 	defer removeDirectory()
 
-	tree := NewBPlusTree(directory, false)
+	tree := newBPlusTree(directory, false)
 
 	var ok bool
 	var lrp *data.LogRecordPosition
@@ -85,7 +85,7 @@ func TestBPlusTree_Size(t *testing.T) {
 	makeDirectory()
 	defer removeDirectory()
 
-	tree := NewBPlusTree(directory, false)
+	tree := newBPlusTree(directory, false)
 	assert.Zero(t, tree.Size())
 
 	tree.Put([]byte("114"), &data.LogRecordPosition{FileID: 114, Offset: 5})
@@ -100,7 +100,7 @@ func TestBPlusTreeIterator_New1(t *testing.T) {
 	defer removeDirectory()
 
 	// The indexer has no key
-	tree := NewBPlusTree(directory, false)
+	tree := newBPlusTree(directory, false)
 
 	iter1 := tree.Iterator(false)
 	defer iter1.Close()
@@ -112,7 +112,7 @@ func TestBPlusTreeIterator_New2(t *testing.T) {
 	defer removeDirectory()
 
 	// The indexer has one key
-	tree := NewBPlusTree(directory, false)
+	tree := newBPlusTree(directory, false)
 	tree.Put([]byte("114"), &data.LogRecordPosition{FileID: 114, Offset: 114})
 
 	iter2 := tree.Iterator(false)
@@ -129,7 +129,7 @@ func TestBPlusTreeIterator_New3(t *testing.T) {
 	makeDirectory()
 	defer removeDirectory()
 
-	tree := NewBPlusTree(directory, false)
+	tree := newBPlusTree(directory, false)
 
 	// The indexer has more keys
 	var count int = 20
@@ -161,7 +161,7 @@ func TestBPlusTreeIterator_Seek(t *testing.T) {
 	makeDirectory()
 	defer removeDirectory()
 
-	tree := NewBPlusTree(directory, false)
+	tree := newBPlusTree(directory, false)
 
 	for i := 1; i <= 10; i++ {
 		tree.Put(utils.NewKey(i), &data.LogRecordPosition{FileID: 114, Offset: 514})

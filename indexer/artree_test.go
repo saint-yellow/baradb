@@ -11,13 +11,13 @@ import (
 	"github.com/saint-yellow/baradb/utils"
 )
 
-func TestARTree_New(t *testing.T) {
-	tree := NewARTree()
+func TestARTree_new(t *testing.T) {
+	tree := newARTree()
 	assert.NotNil(t, tree)
 }
 
 func TestARTree_Put(t *testing.T) {
-	tree := NewARTree()
+	tree := newARTree()
 
 	var lrp *data.LogRecordPosition
 
@@ -29,7 +29,7 @@ func TestARTree_Put(t *testing.T) {
 }
 
 func TestARTree_Get(t *testing.T) {
-	tree := NewARTree()
+	tree := newARTree()
 
 	tree.Put([]byte("114"), &data.LogRecordPosition{FileID: 114, Offset: 114})
 	lrp := tree.Get([]byte("114"))
@@ -44,7 +44,7 @@ func TestARTree_Get(t *testing.T) {
 }
 
 func TestARTree_Delete(t *testing.T) {
-	tree := NewARTree()
+	tree := newARTree()
 
 	var lrp *data.LogRecordPosition
 	var ok bool
@@ -60,7 +60,7 @@ func TestARTree_Delete(t *testing.T) {
 }
 
 func TestARTree_Size(t *testing.T) {
-	tree := NewARTree()
+	tree := newARTree()
 	assert.Zero(t, tree.Size())
 
 	tree.Put([]byte("114"), &data.LogRecordPosition{FileID: 114, Offset: 114})
@@ -71,8 +71,8 @@ func TestARTree_Size(t *testing.T) {
 	assert.Zero(t, tree.Size())
 }
 
-func TestARTreeIterator_New(t *testing.T) {
-	tree := NewARTree()
+func TestARTreeIterator_new(t *testing.T) {
+	tree := newARTree()
 
 	// The indexer has no key
 	iter1 := tree.Iterator(false)
@@ -104,7 +104,7 @@ func TestARTreeIterator_New(t *testing.T) {
 }
 
 func TestARTreeIterator_Seek(t *testing.T) {
-	tree := NewARTree()
+	tree := newARTree()
 
 	for i := 1; i <= 10; i++ {
 		tree.Put(utils.NewKey(i), &data.LogRecordPosition{FileID: 114, Offset: 514})

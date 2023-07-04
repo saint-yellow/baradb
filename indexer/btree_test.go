@@ -12,7 +12,7 @@ import (
 )
 
 func TestBTree_Put(t *testing.T) {
-	bt := NewBTree()
+	bt := newBTree()
 
 	var lrp *data.LogRecordPosition
 
@@ -31,7 +31,7 @@ func TestBTree_Put(t *testing.T) {
 }
 
 func TestBTree_Get(t *testing.T) {
-	bt := NewBTree()
+	bt := newBTree()
 
 	res1 := bt.Put(nil, &data.LogRecordPosition{FileID: 1, Offset: 100})
 	assert.NotNil(t, res1)
@@ -51,7 +51,7 @@ func TestBTree_Get(t *testing.T) {
 }
 
 func TestBTree_Delete(t *testing.T) {
-	bt := NewBTree()
+	bt := newBTree()
 
 	res1 := bt.Put(nil, &data.LogRecordPosition{FileID: 114, Offset: 514})
 	assert.NotNil(t, res1)
@@ -69,7 +69,7 @@ func TestBTree_Delete(t *testing.T) {
 }
 
 func TestBTreeIterator_New(t *testing.T) {
-	bt1 := NewBTree()
+	bt1 := newBTree()
 
 	// The indexer has no key
 	bti1 := bt1.Iterator(false)
@@ -101,7 +101,7 @@ func TestBTreeIterator_New(t *testing.T) {
 }
 
 func TestBTreeIterator_Seek(t *testing.T) {
-	bt1 := NewBTree()
+	bt1 := newBTree()
 	for i := 1; i <= 10; i++ {
 		bt1.Put(utils.NewKey(i), &data.LogRecordPosition{FileID: 114, Offset: 514})
 	}

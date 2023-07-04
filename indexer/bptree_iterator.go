@@ -6,7 +6,7 @@ import (
 	"github.com/saint-yellow/baradb/data"
 )
 
-type BPlusTreeIterator struct {
+type bplusTreeIterator struct {
 	tx           *bbolt.Tx
 	cursor       *bbolt.Cursor
 	reverse      bool
@@ -14,13 +14,13 @@ type BPlusTreeIterator struct {
 	currentValue []byte
 }
 
-func NewBPlusTreeIterator(tree *bbolt.DB, reverse bool) *BPlusTreeIterator {
+func newBPlusTreeIterator(tree *bbolt.DB, reverse bool) *bplusTreeIterator {
 	tx, err := tree.Begin(false)
 	if err != nil {
 		panic("Failed to begin a transaction")
 	}
 	cursor := tx.Bucket(IndexBucketName).Cursor()
-	iter := &BPlusTreeIterator{
+	iter := &bplusTreeIterator{
 		tx:      tx,
 		cursor:  cursor,
 		reverse: reverse,
@@ -29,7 +29,7 @@ func NewBPlusTreeIterator(tree *bbolt.DB, reverse bool) *BPlusTreeIterator {
 	return iter
 }
 
-func (iter *BPlusTreeIterator) Rewind() {
+func (iter *bplusTreeIterator) Rewind() {
 	if iter.reverse {
 		iter.currentKey, iter.currentValue = iter.cursor.Last()
 	} else {
@@ -37,11 +37,11 @@ func (iter *BPlusTreeIterator) Rewind() {
 	}
 }
 
-func (iter *BPlusTreeIterator) Seek(key []byte) {
+func (iter *bplusTreeIterator) Seek(key []byte) {
 	iter.currentKey, iter.currentValue = iter.cursor.Seek(key)
 }
 
-func (iter *BPlusTreeIterator) Next() {
+func (iter *bplusTreeIterator) Next() {
 	if iter.reverse {
 		iter.currentKey, iter.currentValue = iter.cursor.Prev()
 	} else {
@@ -49,19 +49,19 @@ func (iter *BPlusTreeIterator) Next() {
 	}
 }
 
-func (iter *BPlusTreeIterator) Valid() bool {
+func (iter *bplusTreeIterator) Valid() bool {
 	return len(iter.currentKey) != 0
 }
 
-func (iter *BPlusTreeIterator) Key() []byte {
+func (iter *bplusTreeIterator) Key() []byte {
 	return iter.currentKey
 }
 
-func (iter *BPlusTreeIterator) Value() *data.LogRecordPosition {
+func (iter *bplusTreeIterator) Value() *data.LogRecordPosition {
 	return data.DecodeLogRecordPosition(iter.currentValue)
 }
 
-func (iter *BPlusTreeIterator) Close() {
+func (iter *bplusTreeIterator) Close() {
 	err := iter.tx.Rollback()
 	if err != nil {
 		panic("Failed to rollback a transaction")
