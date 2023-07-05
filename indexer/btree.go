@@ -1,12 +1,26 @@
 package indexer
 
 import (
+	"bytes"
 	"sync"
 
 	"github.com/google/btree"
 
 	"github.com/saint-yellow/baradb/data"
 )
+
+// bTreeItem represents a single object in a B tree
+//
+// It combines a log record's key and position.
+// And it implements [btree.Item](github.com/google/btree) interface
+type bTreeItem struct {
+	key      []byte                  // The key of the log record
+	position *data.LogRecordPosition // The position of the log record
+}
+
+func (x *bTreeItem) Less(y btree.Item) bool {
+	return bytes.Compare(x.key, y.(*bTreeItem).key) == -1
+}
 
 // BTree A concrete indexer that implements Indexer interface by ecapsulating Google's BTree library
 type bTree struct {
@@ -23,11 +37,13 @@ func newBTree() *bTree {
 	return bt
 }
 
-// Put puts data to B tree indexer
+// Put puts a given key and its corresponding position to a B tree indexer
+//
+// It returns the old postion if the given key already exists in the indexer and nil otherwise.
 func (bt *bTree) Put(key []byte, position *data.LogRecordPosition) *data.LogRecordPosition {
-	x := &Item{
-		Key:      key,
-		Position: position,
+	x := &bTreeItem{
+		key:      key,
+		position: position,
 	}
 	bt.lock.Lock()
 	oldItem := bt.tree.ReplaceOrInsert(x)
@@ -35,19 +51,19 @@ func (bt *bTree) Put(key []byte, position *data.LogRecordPosition) *data.LogReco
 	if oldItem == nil {
 		return nil
 	}
-	return oldItem.(*Item).Position
+	return oldItem.(*bTreeItem).position
 }
 
-// Get data from BTree
+// Get returns corresponding position of the given key from the indexer
 func (bt *bTree) Get(key []byte) *data.LogRecordPosition {
-	x := &Item{
-		Key: key,
+	x := &bTreeItem{
+		key: key,
 	}
 	y := bt.tree.Get(x)
 	if y == nil {
 		return nil
 	}
-	return y.(*Item).Position
+	return y.(*bTreeItem).position
 }
 
 // Size returns how many key/value pairs in the BTree
@@ -57,8 +73,8 @@ func (bt *bTree) Size() int {
 
 // Delete deletes a key from the B tree indexer
 func (bt *bTree) Delete(key []byte) (*data.LogRecordPosition, bool) {
-	x := &Item{
-		Key: key,
+	x := &bTreeItem{
+		key: key,
 	}
 	bt.lock.Lock()
 	y := bt.tree.Delete(x)
@@ -66,7 +82,7 @@ func (bt *bTree) Delete(key []byte) (*data.LogRecordPosition, bool) {
 	if y == nil {
 		return nil, false
 	}
-	return y.(*Item).Position, true
+	return y.(*bTreeItem).position, true
 }
 
 func (bt *bTree) Iterator(reverse bool) Iterator {

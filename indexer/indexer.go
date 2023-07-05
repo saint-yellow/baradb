@@ -1,42 +1,42 @@
 package indexer
 
 import (
-	"bytes"
-
-	"github.com/google/btree"
-
 	"github.com/saint-yellow/baradb/data"
 )
 
-// Indexer Abstract interface of an indexer
+// Indexer repersents abstract interface of an in-memory indexer
+//
+// An indexer stores key/value pairs.
+// A key is the key of a log record, and a value is a log record's position in a data file in a disk.
 type Indexer interface {
-	// Put stores location of the corresponding data of the key in the indexer
+	// Put stores a given key and its value in the indexer
+	//
+	// It may replaces the old value if the given already exists
+	//
+	// It returns the old value if the given key already exists and nil otherwise
 	Put([]byte, *data.LogRecordPosition) *data.LogRecordPosition
 
-	// Get gets the location of the corresponding data af the key in the indexer
+	// Get returns the value of the given key from the indexer
+	//
+	// It returns a value if the given key already exists and nil otherwise
 	Get([]byte) *data.LogRecordPosition
 
-	// Delete deletes the location of the corresponding data of the key in the indexer
+	// Delete deletes the value of the given key in the indexer
+	//
+	// It returns the deleted value and a boolean value true if the key exists
+	// Otherwise, it returns nil and a boolean value false
 	Delete([]byte) (*data.LogRecordPosition, bool)
 
 	// Size returns how many key/value pairs in the indexer
 	Size() int
 
-	// Iterator returns an iterator
+	// Iterator creates an iterator of the indexer
+	//
+	// The iterator supports reversed iteration if the given boolean value is true
 	Iterator(bool) Iterator
 
 	// Close closes the indexer
 	Close() error
-}
-
-// Item
-type Item struct {
-	Key      []byte
-	Position *data.LogRecordPosition
-}
-
-func (x *Item) Less(y btree.Item) bool {
-	return bytes.Compare(x.Key, y.(*Item).Key) == -1
 }
 
 // IndexerType enum

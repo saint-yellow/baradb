@@ -11,17 +11,17 @@ import (
 
 // An iterator of a B Tree indexer
 type bTreeIterator struct {
-	currentIndex int     // current iterated location
-	reverse      bool    // whether enable reverse iteration
-	values       []*Item // locations
+	currentIndex int          // current iterated location
+	reverse      bool         // whether enable reverse iteration
+	values       []*bTreeItem // locations
 }
 
 func newBTreeIterator(tree *btree.BTree, reverse bool) *bTreeIterator {
 	var index int
-	values := make([]*Item, tree.Len())
+	values := make([]*bTreeItem, tree.Len())
 
 	saveValues := func(item btree.Item) bool {
-		values[index] = item.(*Item)
+		values[index] = item.(*bTreeItem)
 		index++
 		return true
 	}
@@ -47,11 +47,11 @@ func (iter *bTreeIterator) Rewind() {
 func (iter *bTreeIterator) Seek(key []byte) {
 	if iter.reverse {
 		iter.currentIndex = sort.Search(len(iter.values), func(i int) bool {
-			return bytes.Compare(iter.values[i].Key, key) <= 0
+			return bytes.Compare(iter.values[i].key, key) <= 0
 		})
 	} else {
 		iter.currentIndex = sort.Search(len(iter.values), func(i int) bool {
-			return bytes.Compare(iter.values[i].Key, key) >= 0
+			return bytes.Compare(iter.values[i].key, key) >= 0
 		})
 	}
 }
@@ -65,11 +65,11 @@ func (iter *bTreeIterator) Valid() bool {
 }
 
 func (iter *bTreeIterator) Key() []byte {
-	return iter.values[iter.currentIndex].Key
+	return iter.values[iter.currentIndex].key
 }
 
 func (iter *bTreeIterator) Value() *data.LogRecordPosition {
-	return iter.values[iter.currentIndex].Position
+	return iter.values[iter.currentIndex].position
 }
 
 func (iter *bTreeIterator) Size() int {

@@ -34,14 +34,14 @@ func TestBTree_Get(t *testing.T) {
 	bt := newBTree()
 
 	res1 := bt.Put(nil, &data.LogRecordPosition{FileID: 1, Offset: 100})
-	assert.NotNil(t, res1)
+	assert.Nil(t, res1)
 
 	pos1 := bt.Get(nil)
 	assert.Equal(t, uint32(1), pos1.FileID)
 	assert.Equal(t, int64(100), pos1.Offset)
 
 	res2 := bt.Put([]byte("a"), &data.LogRecordPosition{FileID: 2, Offset: 10})
-	assert.NotNil(t, res2)
+	assert.Nil(t, res2)
 	res3 := bt.Put([]byte("a"), &data.LogRecordPosition{FileID: 2, Offset: 99})
 	assert.NotNil(t, res3)
 
@@ -54,14 +54,14 @@ func TestBTree_Delete(t *testing.T) {
 	bt := newBTree()
 
 	res1 := bt.Put(nil, &data.LogRecordPosition{FileID: 114, Offset: 514})
-	assert.NotNil(t, res1)
+	assert.Nil(t, res1)
 
 	res2, ok2 := bt.Delete(nil)
 	assert.NotNil(t, res2)
 	assert.True(t, ok2)
 
 	res3 := bt.Put([]byte("homo"), &data.LogRecordPosition{FileID: 114, Offset: 1919})
-	assert.NotNil(t, res3)
+	assert.Nil(t, res3)
 
 	res4, ok4 := bt.Delete([]byte("homo"))
 	assert.NotNil(t, res4)

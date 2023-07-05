@@ -25,6 +25,9 @@ func TestARTree_Put(t *testing.T) {
 	assert.Nil(t, lrp)
 
 	lrp = tree.Put([]byte("14"), &data.LogRecordPosition{FileID: 514, Offset: 514})
+	assert.Nil(t, lrp)
+
+	lrp = tree.Put([]byte("114"), &data.LogRecordPosition{FileID: 14, Offset: 51})
 	assert.NotNil(t, lrp)
 }
 
@@ -55,7 +58,7 @@ func TestARTree_Delete(t *testing.T) {
 	assert.NotNil(t, lrp)
 	assert.True(t, ok)
 	lrp, ok = tree.Delete([]byte("114"))
-	assert.NotNil(t, lrp)
+	assert.Nil(t, lrp)
 	assert.False(t, ok)
 }
 

@@ -11,9 +11,9 @@ import (
 
 // An iterator of a Adaptive Radix Tree indexer
 type arTreeIterator struct {
-	currentIndex int     // current iterated location
-	reverse      bool    // whether enable reverse iteration
-	values       []*Item // locations
+	currentIndex int          // current iterated location
+	reverse      bool         // whether enable reverse iteration
+	values       []*bTreeItem // locations
 }
 
 func newARTreeIterator(tree art.Tree, reverse bool) *arTreeIterator {
@@ -21,12 +21,12 @@ func newARTreeIterator(tree art.Tree, reverse bool) *arTreeIterator {
 	if reverse {
 		index = tree.Size() - 1
 	}
-	values := make([]*Item, tree.Size())
+	values := make([]*bTreeItem, tree.Size())
 
 	saveValues := func(node art.Node) bool {
-		item := &Item{
-			Key:      node.Key(),
-			Position: node.Value().(*data.LogRecordPosition),
+		item := &bTreeItem{
+			key:      node.Key(),
+			position: node.Value().(*data.LogRecordPosition),
 		}
 
 		values[index] = item
@@ -57,11 +57,11 @@ func (iter *arTreeIterator) Rewind() {
 func (iter *arTreeIterator) Seek(key []byte) {
 	if iter.reverse {
 		iter.currentIndex = sort.Search(len(iter.values), func(i int) bool {
-			return bytes.Compare(iter.values[i].Key, key) <= 0
+			return bytes.Compare(iter.values[i].key, key) <= 0
 		})
 	} else {
 		iter.currentIndex = sort.Search(len(iter.values), func(i int) bool {
-			return bytes.Compare(iter.values[i].Key, key) >= 0
+			return bytes.Compare(iter.values[i].key, key) >= 0
 		})
 	}
 }
@@ -75,11 +75,11 @@ func (iter *arTreeIterator) Valid() bool {
 }
 
 func (iter *arTreeIterator) Key() []byte {
-	return iter.values[iter.currentIndex].Key
+	return iter.values[iter.currentIndex].key
 }
 
 func (iter *arTreeIterator) Value() *data.LogRecordPosition {
-	return iter.values[iter.currentIndex].Position
+	return iter.values[iter.currentIndex].position
 }
 
 func (iter *arTreeIterator) Close() {
