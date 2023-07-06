@@ -1,4 +1,4 @@
-package indexer
+package index
 
 import (
 	"fmt"
@@ -71,11 +71,11 @@ func TestBTree_Delete(t *testing.T) {
 func TestBTreeIterator_New(t *testing.T) {
 	bt1 := newBTree()
 
-	// The indexer has no key
+	// The index has no key
 	bti1 := bt1.Iterator(false)
 	assert.False(t, bti1.Valid())
 
-	// The indexer has one key
+	// The index has one key
 	bt1.Put([]byte("114"), &data.LogRecordPosition{FileID: 114, Offset: 114})
 	bti2 := bt1.Iterator(false)
 	assert.True(t, bti2.Valid())

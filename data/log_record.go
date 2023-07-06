@@ -6,7 +6,7 @@ import (
 )
 
 // LogRecordPosition represents a position of a LogRecord
-// A position of a LogRecord stores in an in-memory indexer
+// A position of a LogRecord stores in an in-memory index
 type LogRecordPosition struct {
 	// ID of the data file where the log record is stored in
 	FileID uint32

@@ -1,4 +1,4 @@
-package indexer
+package index
 
 import (
 	"bytes"
@@ -9,7 +9,7 @@ import (
 	"github.com/saint-yellow/baradb/data"
 )
 
-// An iterator of a B Tree indexer
+// An iterator of a B Tree index
 type bTreeIterator struct {
 	currentIndex int          // current iterated location
 	reverse      bool         // whether enable reverse iteration

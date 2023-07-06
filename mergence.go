@@ -129,7 +129,7 @@ func (db *DB) Merge() error {
 			}
 
 			lrKey, _ := data.DecodeKey(lr.Key)
-			lrp := db.indexer.Get(lrKey)
+			lrp := db.index.Get(lrKey)
 			if lrp != nil && lrp.FileID == file.FileID && lrp.Offset == offset {
 				lr.Key = data.EncodeKey(lrKey, nonTranNo)
 				mlrp, err := tempDB.appendLogRecord(lr, false)

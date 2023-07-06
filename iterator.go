@@ -3,20 +3,20 @@ package baradb
 import (
 	"bytes"
 
-	"github.com/saint-yellow/baradb/indexer"
+	"github.com/saint-yellow/baradb/index"
 )
 
 // Iterator an iterator of DB
 type Iterator struct {
-	indexIterator indexer.Iterator        // iterator of an indexer
+	indexIterator index.Iterator        // iterator of an index
 	db            *DB                     // DB engine
-	options       indexer.IteratorOptions // options of an iterator of an indexer
+	options       index.IteratorOptions // options of an iterator of an index
 }
 
 // NewItrerator initializes an iterator of DB engine
-func (db *DB) NewItrerator(options indexer.IteratorOptions) *Iterator {
+func (db *DB) NewItrerator(options index.IteratorOptions) *Iterator {
 	iterator := &Iterator{
-		indexIterator: db.indexer.Iterator(options.Reverse),
+		indexIterator: db.index.Iterator(options.Reverse),
 		db:            db,
 		options:       options,
 	}

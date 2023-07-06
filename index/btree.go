@@ -1,4 +1,4 @@
-package indexer
+package index
 
 import (
 	"bytes"
@@ -22,7 +22,7 @@ func (x *bTreeItem) Less(y btree.Item) bool {
 	return bytes.Compare(x.key, y.(*bTreeItem).key) == -1
 }
 
-// BTree A concrete indexer that implements Indexer interface by ecapsulating Google's BTree library
+// BTree A concrete index that implements Index interface by ecapsulating Google's BTree library
 type bTree struct {
 	tree *btree.BTree
 	lock *sync.RWMutex
@@ -37,9 +37,9 @@ func newBTree() *bTree {
 	return bt
 }
 
-// Put puts a given key and its corresponding position to a B tree indexer
+// Put puts a given key and its corresponding position to a B tree index
 //
-// It returns the old postion if the given key already exists in the indexer and nil otherwise.
+// It returns the old postion if the given key already exists in the index and nil otherwise.
 func (bt *bTree) Put(key []byte, position *data.LogRecordPosition) *data.LogRecordPosition {
 	x := &bTreeItem{
 		key:      key,
@@ -54,7 +54,7 @@ func (bt *bTree) Put(key []byte, position *data.LogRecordPosition) *data.LogReco
 	return oldItem.(*bTreeItem).position
 }
 
-// Get returns corresponding position of the given key from the indexer
+// Get returns corresponding position of the given key from the index
 func (bt *bTree) Get(key []byte) *data.LogRecordPosition {
 	x := &bTreeItem{
 		key: key,
@@ -71,7 +71,7 @@ func (bt *bTree) Size() int {
 	return bt.tree.Len()
 }
 
-// Delete deletes a key from the B tree indexer
+// Delete deletes a key from the B tree index
 func (bt *bTree) Delete(key []byte) (*data.LogRecordPosition, bool) {
 	x := &bTreeItem{
 		key: key,

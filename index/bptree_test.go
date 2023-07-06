@@ -1,4 +1,4 @@
-package indexer
+package index
 
 import (
 	"fmt"
@@ -99,7 +99,7 @@ func TestBPlusTreeIterator_New1(t *testing.T) {
 	makeDirectory()
 	defer removeDirectory()
 
-	// The indexer has no key
+	// The index has no key
 	tree := newBPlusTree(directory, false)
 
 	iter1 := tree.Iterator(false)
@@ -111,7 +111,7 @@ func TestBPlusTreeIterator_New2(t *testing.T) {
 	makeDirectory()
 	defer removeDirectory()
 
-	// The indexer has one key
+	// The index has one key
 	tree := newBPlusTree(directory, false)
 	tree.Put([]byte("114"), &data.LogRecordPosition{FileID: 114, Offset: 114})
 
@@ -131,7 +131,7 @@ func TestBPlusTreeIterator_New3(t *testing.T) {
 
 	tree := newBPlusTree(directory, false)
 
-	// The indexer has more keys
+	// The index has more keys
 	var count int = 20
 	for i := 1; i <= count; i++ {
 		tree.Put(utils.NewKey(i), &data.LogRecordPosition{FileID: 114, Offset: int64(i)})

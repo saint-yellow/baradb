@@ -1,6 +1,6 @@
 package baradb
 
-import "github.com/saint-yellow/baradb/indexer"
+import "github.com/saint-yellow/baradb/index"
 
 // Options represents options of a DB engine instance
 type DBOptions struct {
@@ -15,8 +15,8 @@ type DBOptions struct {
 	// SyncWrites indicates whether persist data after writing
 	SyncWrites bool
 
-	// IndexerType indicates the type of the indexer of the DB engine
-	IndexerType indexer.IndexerType
+	// IndexType indicates the type of the index of the DB engine
+	IndexType index.IndexType
 
 	// SyncThreshold indicates a threshold for persisting data.
 	//
@@ -68,7 +68,7 @@ var (
 		Directory:       "/tmp/baradb",
 		MaxDataFileSize: 512 * 1024 * 1024,
 		SyncWrites:      false,
-		IndexerType:     indexer.ARtree,
+		IndexType:     index.ARtree,
 		MMapAtStartup:   false,
 	}
 	// DefaultWriteBatchOptions Default options for batch writing

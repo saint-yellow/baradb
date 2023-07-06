@@ -1,4 +1,4 @@
-package indexer
+package index
 
 import (
 	"path/filepath"
@@ -12,7 +12,7 @@ const BPlusTreeIndexFileName = "bplustree-index"
 
 var IndexBucketName = []byte("baradb-index")
 
-// bplusTree represents a B+ Tree indexer
+// bplusTree represents a B+ Tree index
 type bplusTree struct {
 	tree *bbolt.DB
 }
@@ -39,7 +39,7 @@ func newBPlusTree(directory string, syncWrites bool) *bplusTree {
 	return t
 }
 
-// Put stores location of the corresponding data of the key in the indexer
+// Put stores location of the corresponding data of the key in the index
 func (t *bplusTree) Put(key []byte, position *data.LogRecordPosition) *data.LogRecordPosition {
 	var oldValue []byte
 	err := t.tree.Update(func(tx *bbolt.Tx) error {
@@ -57,7 +57,7 @@ func (t *bplusTree) Put(key []byte, position *data.LogRecordPosition) *data.LogR
 	return nil
 }
 
-// Get gets the location of the corresponding data af the key in the indexer
+// Get gets the location of the corresponding data af the key in the index
 func (t *bplusTree) Get(key []byte) *data.LogRecordPosition {
 	var lrp *data.LogRecordPosition
 	err := t.tree.View(func(tx *bbolt.Tx) error {
@@ -74,7 +74,7 @@ func (t *bplusTree) Get(key []byte) *data.LogRecordPosition {
 	return lrp
 }
 
-// Delete deletes the location of the corresponding data of the key in the indexer
+// Delete deletes the location of the corresponding data of the key in the index
 func (t *bplusTree) Delete(key []byte) (*data.LogRecordPosition, bool) {
 	var ok bool
 	var oldValue []byte
@@ -98,7 +98,7 @@ func (t *bplusTree) Delete(key []byte) (*data.LogRecordPosition, bool) {
 	return lrp, ok
 }
 
-// Size returns how many key/value pairs in the indexer
+// Size returns how many key/value pairs in the index
 func (t *bplusTree) Size() int {
 	var size int
 	err := t.tree.View(func(tx *bbolt.Tx) error {

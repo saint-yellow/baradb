@@ -5,7 +5,7 @@ import (
 	"sync/atomic"
 
 	"github.com/saint-yellow/baradb/data"
-	"github.com/saint-yellow/baradb/indexer"
+	"github.com/saint-yellow/baradb/index"
 )
 
 // nonTranNo This is not a transaction serial number
@@ -24,7 +24,7 @@ type WriteBatch struct {
 
 // NewWriteBatch initializes a write batch in the DB engine
 func (db *DB) NewWriteBatch(options WriteBatchOptions) *WriteBatch {
-	if db.options.IndexerType == indexer.BPtree && !db.tranNoFileExists && !db.isFirstLaunch {
+	if db.options.IndexType == index.BPtree && !db.tranNoFileExists && !db.isFirstLaunch {
 		panic("Can not use a write batch since the tran-no file does not exist")
 	}
 
@@ -63,9 +63,9 @@ func (wb *WriteBatch) Delete(key []byte) error {
 		return ErrKeyIsEmpty
 	}
 
-	// Try to find the corresponding position in the indexer
+	// Try to find the corresponding position in the index
 	// If the position is not found, then delete the corresponding log record in this transaction
-	lrp := wb.db.indexer.Get(key)
+	lrp := wb.db.index.Get(key)
 	if lrp == nil {
 		if wb.pendingWrites[string(key)] != nil {
 			delete(wb.pendingWrites, string(key))
@@ -143,9 +143,9 @@ func (wb *WriteBatch) Commit() error {
 
 		switch lr.Type {
 		case data.DeletedLogRecord:
-			oldLRP, _ = wb.db.indexer.Delete(lr.Key)
+			oldLRP, _ = wb.db.index.Delete(lr.Key)
 		case data.NormalLogRecord:
-			oldLRP = wb.db.indexer.Put(lr.Key, lrp)
+			oldLRP = wb.db.index.Put(lr.Key, lrp)
 		}
 
 		if oldLRP != nil {

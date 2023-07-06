@@ -13,7 +13,7 @@ import (
 	"github.com/gofrs/flock"
 
 	"github.com/saint-yellow/baradb/data"
-	"github.com/saint-yellow/baradb/indexer"
+	"github.com/saint-yellow/baradb/index"
 	"github.com/saint-yellow/baradb/io_handler"
 	"github.com/saint-yellow/baradb/utils"
 )
@@ -30,7 +30,7 @@ type DB struct {
 	fileIDs          []int                     // File IDs of all data files
 	activeFile       *data.DataFile            // Active data file, readable and writeable
 	inactiveFiles    map[uint32]*data.DataFile // Inactive data files, readable but unwritable
-	indexer          indexer.Indexer           // In-memory indexer
+	index          index.Index           // In-memory index
 	tranNo           uint64                    // Globally increasing serial number of a transaction
 	isMerging        bool                      // Whether the DB is merging
 	tranNoFileExists bool                      // Whether a file about transaction serial number exists
@@ -80,8 +80,8 @@ func LaunchDB(options DBOptions) (*DB, error) {
 		options:       options,
 		activeFile:    nil,
 		inactiveFiles: make(map[uint32]*data.DataFile),
-		indexer: indexer.NewIndexer(
-			options.IndexerType,
+		index: index.New(
+			options.IndexType,
 			options.Directory,
 			options.SyncWrites,
 		),
@@ -97,8 +97,8 @@ func LaunchDB(options DBOptions) (*DB, error) {
 		return nil, err
 	}
 
-	// If the DB engine uses B+ tree as its indexer, then it don't need to load index from files
-	if options.IndexerType != indexer.BPtree {
+	// If the DB engine uses B+ tree as its index, then it don't need to load index from files
+	if options.IndexType != index.BPtree {
 		if err := db.loadIndexFromHintFile(); err != nil {
 			return nil, err
 		}
@@ -116,7 +116,7 @@ func LaunchDB(options DBOptions) (*DB, error) {
 	}
 
 	// Get a transaction serial number from file
-	if options.IndexerType == indexer.BPtree {
+	if options.IndexType == index.BPtree {
 		if err := db.loadTranNo(); err != nil {
 			return nil, err
 		}
@@ -175,8 +175,8 @@ func (db *DB) Put(key, value []byte) error {
 		return err
 	}
 
-	// Update the data in the indexer
-	if oldLRP := db.indexer.Put(key, lrp); oldLRP != nil {
+	// Update the data in the index
+	if oldLRP := db.index.Put(key, lrp); oldLRP != nil {
 		db.reclaimSize += int64(oldLRP.Size)
 	}
 
@@ -192,7 +192,7 @@ func (db *DB) Get(key []byte) ([]byte, error) {
 		return nil, ErrKeyIsEmpty
 	}
 
-	lrp := db.indexer.Get(key)
+	lrp := db.index.Get(key)
 	if lrp == nil {
 		return nil, ErrKeyNotFound
 	}
@@ -233,7 +233,7 @@ func (db *DB) Delete(key []byte) error {
 	}
 
 	// Maybe the data never exist, or it has been deleted before
-	if p := db.indexer.Get(key); p == nil {
+	if p := db.index.Get(key); p == nil {
 		return nil
 	}
 
@@ -250,7 +250,7 @@ func (db *DB) Delete(key []byte) error {
 	db.reclaimSize += int64(lrp.Size)
 
 	//
-	oldLRP, ok := db.indexer.Delete(key)
+	oldLRP, ok := db.index.Delete(key)
 	if !ok {
 		return ErrIndexUpdateFailed
 	}
@@ -400,10 +400,10 @@ func (db *DB) loadIndexFromDataFiles() error {
 	updateIndex := func(key []byte, lrt data.LogRecordType, lrp *data.LogRecordPosition) {
 		var oldLRP *data.LogRecordPosition
 		if lrt == data.DeletedLogRecord {
-			oldLRP, _ = db.indexer.Delete(key)
+			oldLRP, _ = db.index.Delete(key)
 			db.reclaimSize += int64(lrp.Size)
 		} else {
-			oldLRP = db.indexer.Put(key, lrp)
+			oldLRP = db.index.Put(key, lrp)
 		}
 
 		if oldLRP != nil {
@@ -508,7 +508,7 @@ func (db *DB) loadIndexFromHintFile() error {
 		}
 
 		lrp := data.DecodeLogRecordPosition(lr.Value)
-		db.indexer.Put(lr.Key, lrp)
+		db.index.Put(lr.Key, lrp)
 		offset += n
 	}
 	return nil
@@ -563,8 +563,8 @@ func (db *DB) resetIOHandler() error {
 
 // ListKeys gets all keys in the DB engine
 func (db *DB) ListKeys() [][]byte {
-	iter := db.indexer.Iterator(false)
-	keys := make([][]byte, db.indexer.Size())
+	iter := db.index.Iterator(false)
+	keys := make([][]byte, db.index.Size())
 
 	index := 0
 	for iter.Rewind(); iter.Valid(); iter.Next() {
@@ -584,7 +584,7 @@ func (db *DB) Fold(fn userOperationFunc) error {
 	db.mu.RLock()
 	defer db.mu.RUnlock()
 
-	iter := db.indexer.Iterator(false)
+	iter := db.index.Iterator(false)
 	defer iter.Close()
 	for iter.Rewind(); iter.Valid(); iter.Next() {
 		value, err := db.getValueByPosition(iter.Value())
@@ -618,7 +618,7 @@ func (db *DB) Close() error {
 
 	var err error
 
-	err = db.indexer.Close()
+	err = db.index.Close()
 	if err != nil {
 		return err
 	}
@@ -689,7 +689,7 @@ func (db *DB) Stat() *Stat {
 	}
 
 	stat := &Stat{
-		KeyNumber:       uint(db.indexer.Size()),
+		KeyNumber:       uint(db.index.Size()),
 		DataFileNumber:  uint(dataFileNumber),
 		ReclaimableSize: db.reclaimSize,
 		DiskSize:        dataFileSize,

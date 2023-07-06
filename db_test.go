@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/saint-yellow/baradb/indexer"
+	"github.com/saint-yellow/baradb/index"
 	"github.com/saint-yellow/baradb/utils"
 )
 
@@ -203,14 +203,14 @@ func TestDB_NewIterator(t *testing.T) {
 	defer destroyDB(db)
 
 	// The DB engine has no key
-	iter1 := db.NewItrerator(indexer.DefaultIteratorOptions)
+	iter1 := db.NewItrerator(index.DefaultIteratorOptions)
 	defer iter1.Close()
 	assert.NotNil(t, iter1)
 	assert.False(t, iter1.Valid())
 
 	// The DB engine has one key
 	db.Put([]byte("114"), []byte("514"))
-	iter2 := db.NewItrerator(indexer.DefaultIteratorOptions)
+	iter2 := db.NewItrerator(index.DefaultIteratorOptions)
 	defer iter2.Close()
 	assert.NotNil(t, iter2)
 	assert.True(t, iter2.Valid())
@@ -227,68 +227,68 @@ func TestDB_NewIterator(t *testing.T) {
 	}
 
 	// Forward iteration
-	iter3 := db.NewItrerator(indexer.DefaultIteratorOptions)
+	iter3 := db.NewItrerator(index.DefaultIteratorOptions)
 	defer iter3.Close()
 	assert.NotNil(t, iter3)
 	assert.True(t, iter3.Valid())
-	index := 1
+	counter := 1
 	for iter3.Rewind(); iter3.Valid(); iter3.Next() {
-		assert.Equal(t, fmt.Sprintf("%02d", index), string(iter3.Key()))
+		assert.Equal(t, fmt.Sprintf("%02d", counter), string(iter3.Key()))
 		b, err = iter3.Value()
 		assert.Nil(t, err)
 		assert.NotNil(t, b)
-		if index < keysCount {
-			index++
+		if counter < keysCount {
+			counter++
 		}
 	}
 
 	// Forward seek
 	iter3.Rewind()
-	index = 10
-	for iter3.Seek([]byte(fmt.Sprintf("%02d", index))); iter3.Valid(); iter3.Next() {
-		assert.Equal(t, fmt.Sprintf("%02d", index), string(iter3.Key()))
+	counter = 10
+	for iter3.Seek([]byte(fmt.Sprintf("%02d", counter))); iter3.Valid(); iter3.Next() {
+		assert.Equal(t, fmt.Sprintf("%02d", counter), string(iter3.Key()))
 		b, err = iter3.Value()
 		assert.Nil(t, err)
 		assert.NotNil(t, b)
-		index++
+		counter++
 	}
 
 	// Reversed iteration
-	opts := indexer.DefaultIteratorOptions
+	opts := index.DefaultIteratorOptions
 	opts.Reverse = true
 	iter4 := db.NewItrerator(opts)
 	defer iter4.Close()
-	index = keysCount
+	counter = keysCount
 	for iter4.Rewind(); iter4.Valid(); iter4.Next() {
-		assert.Equal(t, fmt.Sprintf("%02d", index), string(iter4.Key()))
+		assert.Equal(t, fmt.Sprintf("%02d", counter), string(iter4.Key()))
 		b, err = iter4.Value()
 		assert.Nil(t, err)
 		assert.NotNil(t, b)
-		index--
+		counter--
 	}
 
 	// Reversed seek
 	iter4.Rewind()
-	index = 5
+	counter = 5
 	for iter4.Seek([]byte("05")); iter4.Valid(); iter4.Next() {
-		assert.Equal(t, fmt.Sprintf("%02d", index), string(iter4.Key()))
+		assert.Equal(t, fmt.Sprintf("%02d", counter), string(iter4.Key()))
 		b, err = iter4.Value()
 		assert.Nil(t, err)
 		assert.NotNil(t, b)
-		index--
+		counter--
 	}
 
 	// Specify a prefix
 	opts.Prefix = []byte("1")
-	index = 19
+	counter = 19
 	iter5 := db.NewItrerator(opts)
 	defer iter5.Close()
 	for iter5.Rewind(); iter5.Valid(); iter5.Next() {
-		assert.Equal(t, fmt.Sprintf("%02d", index), string(iter5.Key()))
+		assert.Equal(t, fmt.Sprintf("%02d", counter), string(iter5.Key()))
 		b, err = iter5.Value()
 		assert.Nil(t, err)
 		assert.NotNil(t, b)
-		index--
+		counter--
 	}
 }
 

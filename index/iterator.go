@@ -1,10 +1,10 @@
-package indexer
+package index
 
 import (
 	"github.com/saint-yellow/baradb/data"
 )
 
-// An abstract interator of an indexer
+// An abstract interator of an index
 type Iterator interface {
 	Rewind() // Rewind resets the iteration
 

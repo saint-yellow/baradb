@@ -1,4 +1,4 @@
-package indexer
+package index
 
 import (
 	"sync"
@@ -14,7 +14,7 @@ type arTree struct {
 	lock *sync.RWMutex
 }
 
-// NewarTree initializes an Adaptive Radix Tree indexer
+// NewarTree initializes an Adaptive Radix Tree index
 func newARTree() *arTree {
 	t := &arTree{
 		tree: art.New(),
@@ -23,7 +23,7 @@ func newARTree() *arTree {
 	return t
 }
 
-// Put stores location of the corresponding data of the key in the indexer
+// Put stores location of the corresponding data of the key in the index
 func (t *arTree) Put(key []byte, position *data.LogRecordPosition) *data.LogRecordPosition {
 	t.lock.Lock()
 	oldValue, updated := t.tree.Insert(key, position)
@@ -36,7 +36,7 @@ func (t *arTree) Put(key []byte, position *data.LogRecordPosition) *data.LogReco
 	return lrp
 }
 
-// Get gets the location of the corresponding data af the key in the indexer
+// Get gets the location of the corresponding data af the key in the index
 func (t *arTree) Get(key []byte) *data.LogRecordPosition {
 	t.lock.RLock()
 	defer t.lock.RUnlock()
@@ -49,7 +49,7 @@ func (t *arTree) Get(key []byte) *data.LogRecordPosition {
 	return value.(*data.LogRecordPosition)
 }
 
-// Delete deletes the location of the corresponding data of the key in the indexer
+// Delete deletes the location of the corresponding data of the key in the index
 func (t *arTree) Delete(key []byte) (*data.LogRecordPosition, bool) {
 	t.lock.Lock()
 	oldValue, deleted := t.tree.Delete(key)
@@ -62,7 +62,7 @@ func (t *arTree) Delete(key []byte) (*data.LogRecordPosition, bool) {
 	return lrp, deleted
 }
 
-// Size returns how many key/value pairs in the indexer
+// Size returns how many key/value pairs in the index
 func (t *arTree) Size() int {
 	t.lock.RLock()
 	defer t.lock.RUnlock()

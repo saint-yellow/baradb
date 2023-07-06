@@ -10,15 +10,16 @@ import (
 )
 
 const (
+	// A fixed name suffix of every single data file in the DB engine
 	DataFileNameSuffix = ".data"
 	HintFileName       = "hint-index"
 	MergedFileName     = "merged"
 	TranNoFileName     = "tran-no"
 )
 
-// DataFile represents a data file in a baradb engine instance
+// DataFile represents a data file in a DB engine instance
 type DataFile struct {
-	path        string               // path of the data file
+	path        string               // path of a data file
 	FileID      uint32               // FileID identifies of a data file
 	WriteOffset int64                // WriteOffset indicates the offset of the written data in a data file
 	ioHandler   io_handler.IOHandler // ioHandler is used to handle I/O operations in a data file

@@ -1,4 +1,4 @@
-package indexer
+package index
 
 import (
 	"fmt"
@@ -77,11 +77,11 @@ func TestARTree_Size(t *testing.T) {
 func TestARTreeIterator_new(t *testing.T) {
 	tree := newARTree()
 
-	// The indexer has no key
+	// The index has no key
 	iter1 := tree.Iterator(false)
 	assert.False(t, iter1.Valid())
 
-	// The indexer has one key
+	// The index has one key
 	tree.Put([]byte("114"), &data.LogRecordPosition{FileID: 114, Offset: 114})
 	iter2 := tree.Iterator(false)
 	assert.True(t, iter2.Valid())
