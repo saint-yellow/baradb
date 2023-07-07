@@ -28,8 +28,8 @@ const (
 	MemoryMappedIOHandler
 )
 
-// NewIOHandler Constructs an IOHandler, such as FileIO
-func NewIOHandler(t IOHandlerType, filePath string) (IOHandler, error) {
+// New Constructs an IOHandler, such as FileIO
+func New(t IOHandlerType, filePath string) (IOHandler, error) {
 	switch t {
 	case FileIOHandler:
 		return newFileIO(filePath)

@@ -23,14 +23,14 @@ const (
 	fileLockName = "flock"
 )
 
-// DB baradb engine instance
+// DB represents a baradb engine
 type DB struct {
 	mu               *sync.RWMutex             // Mutial exclusion lock
 	options          DBOptions                 // DB Options
 	fileIDs          []int                     // File IDs of all data files
 	activeFile       *data.DataFile            // Active data file, readable and writeable
 	inactiveFiles    map[uint32]*data.DataFile // Inactive data files, readable but unwritable
-	index          index.Index           // In-memory index
+	index            index.Index               // In-memory index
 	tranNo           uint64                    // Globally increasing serial number of a transaction
 	isMerging        bool                      // Whether the DB is merging
 	tranNoFileExists bool                      // Whether a file about transaction serial number exists
@@ -40,8 +40,8 @@ type DB struct {
 	reclaimSize      int64                     // Size of invalid data
 }
 
-// LaunchDB launches a DB engine instance
-func LaunchDB(options DBOptions) (*DB, error) {
+// Launch launches a DB engine instance
+func Launch(options DBOptions) (*DB, error) {
 	// make sure that options are valid
 	if err := checkDBOptions(options); err != nil {
 		return nil, err
@@ -141,7 +141,7 @@ func (db *DB) Fork(directory string) (*DB, error) {
 		return nil, err
 	}
 
-	return LaunchDB(opts)
+	return Launch(opts)
 }
 
 // Backup copies the DB's data files to a given directory.

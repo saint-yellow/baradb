@@ -31,7 +31,7 @@ func newDataFile(
 	fileID uint32,
 	ioHandlerType io_handler.IOHandlerType,
 ) (*DataFile, error) {
-	ioHandler, err := io_handler.NewIOHandler(ioHandlerType, filePath)
+	ioHandler, err := io_handler.New(ioHandlerType, filePath)
 	if err != nil {
 		return nil, err
 	}
@@ -172,6 +172,7 @@ func WriteHintRecord(hintFile *DataFile, key []byte, lrp *LogRecordPosition) err
 	return hintFile.Write(elr)
 }
 
+// SetIOHandler switches I/O handler of a data file
 func (df *DataFile) SetIOHandler(ioHandlerType io_handler.IOHandlerType) error {
 	var err error
 
@@ -180,7 +181,7 @@ func (df *DataFile) SetIOHandler(ioHandlerType io_handler.IOHandlerType) error {
 		return err
 	}
 
-	ioHandler, err := io_handler.NewIOHandler(ioHandlerType, df.path)
+	ioHandler, err := io_handler.New(ioHandlerType, df.path)
 	if err != nil {
 		return err
 	}

@@ -24,7 +24,7 @@ func init() {
 	os.RemoveAll(opts.Directory)
 
 	var err error
-	db, err = baradb.LaunchDB(opts)
+	db, err = baradb.Launch(opts)
 	if err != nil {
 		panic(err)
 	}

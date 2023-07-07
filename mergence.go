@@ -104,7 +104,7 @@ func (db *DB) Merge() error {
 	mergenceOptions := db.options
 	mergenceOptions.Directory = md
 	mergenceOptions.SyncWrites = false
-	tempDB, err := LaunchDB(mergenceOptions)
+	tempDB, err := Launch(mergenceOptions)
 	if err != nil {
 		return err
 	}
@@ -174,6 +174,7 @@ func (db *DB) Merge() error {
 	return nil
 }
 
+// getMergenceDiretory returns a directory for merging data
 func (db *DB) getMergenceDiretory() string {
 	parentDirectory := path.Dir(db.options.Directory)
 	basename := path.Base(db.options.Directory)
@@ -196,15 +197,15 @@ func (db *DB) loadMergenceFiles() error {
 	}()
 
 	var mergenceFinished bool
-	mergedFileNames := make([]string, len(entries))
-	for i, entry := range entries {
+	mergedFileNames := make([]string, 0)
+	for _, entry := range entries {
 		if entry.Name() == data.MergedFileName {
 			mergenceFinished = true
 		}
 		if entry.Name() == data.TranNoFileName {
 			continue
 		}
-		mergedFileNames[i] = entry.Name()
+		mergedFileNames = append(mergedFileNames, entry.Name())
 	}
 
 	if !mergenceFinished {
@@ -239,12 +240,12 @@ func (db *DB) loadMergenceFiles() error {
 
 // getNonMergedFileID gets the ID of the data file that is not merged
 func (db *DB) getNonMergedFileID(directory string) (uint32, error) {
-	mergedFile, err := data.OpenMergedFile(directory)
+	file, err := data.OpenMergedFile(directory)
 	if err != nil {
 		return 0, err
 	}
 
-	lr, _, err := mergedFile.ReadLogRecord(0)
+	lr, _, err := file.ReadLogRecord(0)
 	if err != nil {
 		return 0, err
 	}

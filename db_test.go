@@ -34,7 +34,7 @@ func destroyDB(db *DB) {
 }
 
 func TestDB_Launch(t *testing.T) {
-	db, err := LaunchDB(testingDBOptions)
+	db, err := Launch(testingDBOptions)
 	defer destroyDB(db)
 
 	// Launch a DB engine with no any data file
@@ -77,7 +77,7 @@ func TestDB_Launch(t *testing.T) {
 
 	// Relaunch the DB engine to test its all data files
 	db.Close()
-	db, err = LaunchDB(testingDBOptions)
+	db, err = Launch(testingDBOptions)
 	assert.Nil(t, err)
 	assert.NotNil(t, db)
 	assert.DirExists(t, db.options.Directory)
@@ -86,7 +86,7 @@ func TestDB_Launch(t *testing.T) {
 }
 
 func TestDB_Put(t *testing.T) {
-	db, _ := LaunchDB(testingDBOptions)
+	db, _ := Launch(testingDBOptions)
 	defer destroyDB(db)
 
 	err := db.Put([]byte("114"), []byte("514"))
@@ -95,13 +95,13 @@ func TestDB_Put(t *testing.T) {
 	assert.Equal(t, "514", string(val))
 
 	db.Close()
-	db, _ = LaunchDB(testingDBOptions)
+	db, _ = Launch(testingDBOptions)
 	val, _ = db.Get([]byte("114"))
 	assert.Equal(t, "514", string(val))
 }
 
 func TestDB_Get(t *testing.T) {
-	db, _ := LaunchDB(testingDBOptions)
+	db, _ := Launch(testingDBOptions)
 	defer destroyDB(db)
 
 	// Use a nil key
@@ -152,14 +152,14 @@ func TestDB_Get(t *testing.T) {
 
 	// Relaunch the DB engine and a stored value
 	db.Close()
-	db, _ = LaunchDB(testingDBOptions)
+	db, _ = Launch(testingDBOptions)
 	b, err = db.Get([]byte("1919"))
 	assert.Nil(t, err)
 	assert.Equal(t, "810", string(b))
 }
 
 func TestDB_Delete(t *testing.T) {
-	db, _ := LaunchDB(testingDBOptions)
+	db, _ := Launch(testingDBOptions)
 	defer destroyDB(db)
 
 	var err error
@@ -187,7 +187,7 @@ func TestDB_Delete(t *testing.T) {
 
 	// Relaunch the DB engine and check the exist key
 	db.Close()
-	db, _ = LaunchDB(testingDBOptions)
+	db, _ = Launch(testingDBOptions)
 	b, err = db.Get([]byte("114"))
 	assert.Nil(t, err)
 	assert.Equal(t, "114514", string(b))
@@ -199,7 +199,7 @@ func TestDB_Delete(t *testing.T) {
 }
 
 func TestDB_NewIterator(t *testing.T) {
-	db, _ := LaunchDB(testingDBOptions)
+	db, _ := Launch(testingDBOptions)
 	defer destroyDB(db)
 
 	// The DB engine has no key
@@ -293,7 +293,7 @@ func TestDB_NewIterator(t *testing.T) {
 }
 
 func TestDB_ListKeys(t *testing.T) {
-	db, _ := LaunchDB(testingDBOptions)
+	db, _ := Launch(testingDBOptions)
 	defer destroyDB(db)
 
 	var keys [][]byte
@@ -327,7 +327,7 @@ func TestDB_ListKeys(t *testing.T) {
 }
 
 func TestDB_Fold(t *testing.T) {
-	db, _ := LaunchDB(testingDBOptions)
+	db, _ := Launch(testingDBOptions)
 	defer destroyDB(db)
 
 	var err error
@@ -348,7 +348,7 @@ func TestDB_Fold(t *testing.T) {
 }
 
 func TestDB_Close(t *testing.T) {
-	db, _ := LaunchDB(testingDBOptions)
+	db, _ := Launch(testingDBOptions)
 	defer destroyDB(db)
 
 	var err error
@@ -360,7 +360,7 @@ func TestDB_Close(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Relaunch the DB engine
-	db, _ = LaunchDB(testingDBOptions)
+	db, _ = Launch(testingDBOptions)
 	assert.Nil(t, db.activeFile)
 	assert.Zero(t, len(db.inactiveFiles))
 
@@ -372,7 +372,7 @@ func TestDB_Close(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Relaunch the DB engine
-	db, _ = LaunchDB(testingDBOptions)
+	db, _ = Launch(testingDBOptions)
 	assert.Zero(t, db.activeFile.FileID)
 	assert.Zero(t, len(db.inactiveFiles))
 
@@ -386,13 +386,13 @@ func TestDB_Close(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Relaunch the DB engine
-	db, _ = LaunchDB(testingDBOptions)
+	db, _ = Launch(testingDBOptions)
 	assert.Positive(t, db.activeFile.FileID)
 	assert.Positive(t, len(db.inactiveFiles))
 }
 
 func TestDB_Sync(t *testing.T) {
-	db, _ := LaunchDB(testingDBOptions)
+	db, _ := Launch(testingDBOptions)
 	defer destroyDB(db)
 
 	var err error
@@ -405,7 +405,7 @@ func TestDB_Sync(t *testing.T) {
 
 	// Relaunch the DB engine
 	db.Close()
-	db, _ = LaunchDB(testingDBOptions)
+	db, _ = Launch(testingDBOptions)
 	assert.Nil(t, db.activeFile)
 	assert.Zero(t, len(db.inactiveFiles))
 
@@ -418,7 +418,7 @@ func TestDB_Sync(t *testing.T) {
 
 	// Relaunch the DB engine
 	db.Close()
-	db, _ = LaunchDB(testingDBOptions)
+	db, _ = Launch(testingDBOptions)
 	assert.Zero(t, db.activeFile.FileID)
 	assert.Zero(t, len(db.inactiveFiles))
 
@@ -433,13 +433,13 @@ func TestDB_Sync(t *testing.T) {
 
 	// Relaunch the DB engine
 	db.Close()
-	db, _ = LaunchDB(testingDBOptions)
+	db, _ = Launch(testingDBOptions)
 	assert.Positive(t, db.activeFile.FileID)
 	assert.Positive(t, len(db.inactiveFiles))
 }
 
 func TestDB_NewWriteBatch(t *testing.T) {
-	db, _ := LaunchDB(testingDBOptions)
+	db, _ := Launch(testingDBOptions)
 	defer destroyDB(db)
 
 	var (
@@ -473,7 +473,7 @@ func TestDB_NewWriteBatch(t *testing.T) {
 
 	// Relaunch DB to get the same data
 	db.Close()
-	db, _ = LaunchDB(testingDBOptions)
+	db, _ = Launch(testingDBOptions)
 	val, err = db.Get(utils.NewKey(2))
 	assert.Equal(t, ErrKeyNotFound, err)
 	assert.Nil(t, val)
@@ -484,21 +484,21 @@ func TestDB_NewWriteBatch(t *testing.T) {
 }
 
 func TestDB_FileLock(t *testing.T) {
-	db1, _ := LaunchDB(testingDBOptions)
+	db1, _ := Launch(testingDBOptions)
 	defer destroyDB(db1)
 
 	assert.NotNil(t, db1.fileLock)
 
 	var err error
 
-	db2, err := LaunchDB(testingDBOptions)
+	db2, err := Launch(testingDBOptions)
 	assert.Nil(t, db2)
 	assert.Equal(t, ErrDatabaseIsUsed, err)
 
 	err = db1.Close()
 	assert.Nil(t, err)
 
-	db2, err = LaunchDB(testingDBOptions)
+	db2, err = Launch(testingDBOptions)
 	assert.Nil(t, err)
 	assert.NotNil(t, db2.fileLock)
 	err = db2.Close()
@@ -506,7 +506,7 @@ func TestDB_FileLock(t *testing.T) {
 }
 
 func TestDB_MMap(t *testing.T) {
-	db, _ := LaunchDB(testingDBOptions)
+	db, _ := Launch(testingDBOptions)
 	defer destroyDB(db)
 
 	for i := 1; i <= 10000; i++ {
@@ -517,19 +517,19 @@ func TestDB_MMap(t *testing.T) {
 	logTemplate := "use memory mapping at startup: %v, time elapsed: %v\n"
 
 	now := time.Now()
-	db, _ = LaunchDB(testingDBOptions)
+	db, _ = Launch(testingDBOptions)
 	t.Logf(fmt.Sprintf(logTemplate, DefaultDBOptions.MMapAtStartup, time.Since(now)))
 	db.Close()
 
 	now = time.Now()
 	DefaultDBOptions.MMapAtStartup = !DefaultDBOptions.MMapAtStartup
-	db, _ = LaunchDB(testingDBOptions)
+	db, _ = Launch(testingDBOptions)
 	t.Logf(fmt.Sprintf(logTemplate, DefaultDBOptions.MMapAtStartup, time.Since(now)))
 	db.Close()
 }
 
 func TestDB_Stat(t *testing.T) {
-	db, _ := LaunchDB(testingDBOptions)
+	db, _ := Launch(testingDBOptions)
 	defer destroyDB(db)
 
 	var stat *Stat
@@ -559,7 +559,7 @@ func TestDB_Stat(t *testing.T) {
 }
 
 func TestDB_Backup(t *testing.T) {
-	db1, _ := LaunchDB(testingDBOptions)
+	db1, _ := Launch(testingDBOptions)
 	defer destroyDB(db1)
 
 	keyNumber := 10000
@@ -585,7 +585,7 @@ func TestDB_Backup(t *testing.T) {
 
 	opts2 := testingDBOptions
 	opts2.Directory = dir
-	db2, _ := LaunchDB(opts2)
+	db2, _ := Launch(opts2)
 	defer destroyDB(db2)
 
 	assert.EqualValues(t, db1.Stat(), db2.Stat())
