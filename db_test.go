@@ -590,3 +590,14 @@ func TestDB_Backup(t *testing.T) {
 
 	assert.EqualValues(t, db1.Stat(), db2.Stat())
 }
+
+func TestDB_Fork(t *testing.T) {
+	db1, _ := Launch(testingDBOptions)
+	defer destroyDB(db1)
+
+	db2, err := db1.Fork("/tmp/baradb-fork")
+	defer destroyDB(db2)
+
+	assert.Nil(t, err)
+	assert.NotNil(t, db2)
+}
