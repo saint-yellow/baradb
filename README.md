@@ -19,11 +19,72 @@ $ go get -u github.com/saint-yellow/bradb
 
 ```go
 
+// launch a DB engine 
+opts := baradb.DefaultDBOptions
+db, err := baradb.Launch(opts)
+if err != nil {
+    panic(err)
+}
+
+// put a key/value pair to the DB engine
+err = db.Put([]byte("114514"), []byte("1919810"))
+if err != nil {
+    panic(err)
+}
+
+// get vlue of a key from the DB engine  
+value, err := db.Get([]byte("114514"))
+if err != nil {
+    panic(err)
+}
+fmt.Println(string(value))
+
+// delete a key/value pair from the DB engine
+err = db.Delete([]byte("114514"))
+if err != nil {
+    panic(err)
+}
 ```
 
 ### Batch Operations 
 
 ```go
+// initialze a write batch
+wb := db.NewWriteBatch(baradb.DefaultWriteBatchOptions)
+
+// put a key/value pair to the write batch 
+err = wb.Put([]byte("1919"), []byte("1919"))
+if err != nil {
+	panic(err)
+}
+
+// the DB engine will not store data in the write batch 
+// since the write batch is not committed
+value, err = db.Get([]byte("1919"))
+if err != nil {
+	panic(err)
+}
+fmt.Println(string(value))
+
+// delete a key/value pair in the write batch 
+err = wb.Delete([]byte("114514"))
+if err != nil {
+	panic(err)
+}
+
+// commit the write batch 
+err = wb.Commit()
+if err != nil {
+	panic(err)
+}
+
+// the DB engine can get data in the write batch 
+// that is successfully committed
+value, err = db.Get([]byte("1919"))
+if err != nil {
+	panic(err)
+}
+fmt.Println(string(value))
 ```
 
 ## Applications 
