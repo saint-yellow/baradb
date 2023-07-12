@@ -9,7 +9,7 @@ import (
 // Iterator an iterator of DB
 type Iterator struct {
 	indexIterator index.Iterator        // iterator of an index
-	db            *DB                     // DB engine
+	db            *DB                   // DB engine
 	options       index.IteratorOptions // options of an iterator of an index
 }
 
