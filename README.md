@@ -55,37 +55,43 @@ wb := db.NewWriteBatch(baradb.DefaultWriteBatchOptions)
 // put a key/value pair to the write batch 
 err = wb.Put([]byte("1919"), []byte("1919"))
 if err != nil {
-	panic(err)
+    panic(err)
 }
 
 // the DB engine will not store data in the write batch 
 // since the write batch is not committed
 value, err = db.Get([]byte("1919"))
 if err != nil {
-	panic(err)
+    panic(err)
 }
 fmt.Println(string(value))
 
 // delete a key/value pair in the write batch 
 err = wb.Delete([]byte("114514"))
 if err != nil {
-	panic(err)
+    panic(err)
 }
 
 // commit the write batch 
 err = wb.Commit()
 if err != nil {
-	panic(err)
+    panic(err)
 }
 
 // the DB engine can get data in the write batch 
 // that is successfully committed
 value, err = db.Get([]byte("1919"))
 if err != nil {
-	panic(err)
+    panic(err)
 }
 fmt.Println(string(value))
 ```
+
+## Features
+
+### Strengths 
+
+### Weaknesses
 
 ## Applications 
 
