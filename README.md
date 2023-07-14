@@ -4,13 +4,26 @@
 
 bara: バラ, Japanese name of rose
 
-## Design Overview 
+## Design Overview
+
 ![design-overview](https://github.com/saint-yellow/baradb/blob/main/documentation/images/design-overview.png)
+
+WRITE: 
+1. Append a log record to the current active log file 
+2. Update the index 
+
+READ: 
+1. Find the position in the index by the given key 
+2. If the position is found, then find the value of the given key in a log file by the position 
+
+## References
+
+1. [Bitcask: A Log-Structured Hash Table for Fast Key/Value Data](https://riak.com/assets/bitcask-intro.pdf)
 
 ## Install
 
 ```shell 
-$ go get -u github.com/saint-yellow/bradb
+$ go get -u github.com/saint-yellow/baradb
 ```
 
 ## Usage
