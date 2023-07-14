@@ -101,6 +101,7 @@ fmt.Println(string(value))
 
 ### Weaknesses
 - Keys must fit in memory
+- Startup speed is affected by the amount of data
 
 ## Applications 
 
