@@ -87,11 +87,20 @@ if err != nil {
 fmt.Println(string(value))
 ```
 
-## Features
+## Features 
 
 ### Strengths 
+- Low latency per item read or written 
+- High throughput, especially when writing an incoming stream of random items 
+- Ability to handle datasets larger than RAM without degradation 
+- Single seek to retrieve any value 
+- Predictable lookup and insert performance 
+- Easy backup 
+- Batch options which guarantee atomicity, consistency, and durability 
+- Support iterator for forward and backward 
 
 ### Weaknesses
+- Keys must fit in memory
 
 ## Applications 
 
