@@ -1,6 +1,6 @@
 # baradb
 
-**baradb** is a K/V storage engine based on Bitcask and inspired by [rosedblabs/rosedb](https://github.com/rosedblabs/rosedb)
+**baradb** is a Key/Value storage engine based on Bitcask model, which is a log-structured storage.
 
 bara: バラ, Japanese name of rose
 
