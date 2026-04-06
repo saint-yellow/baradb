@@ -15,7 +15,7 @@ var (
 
 // NewKey generates a random key for testing
 func NewKey(n int) []byte {
-	return []byte(fmt.Sprintf(keyTemplate, n))
+	return fmt.Appendf(nil, keyTemplate, n)
 }
 
 // NewRandomValue generates a random value for testing
@@ -24,5 +24,5 @@ func NewRandomValue(n int) []byte {
 	for i := range b {
 		b[i] = letters[randSeed.Intn(len(letters))]
 	}
-	return []byte(fmt.Sprintf(valueTemplate, string(b)))
+	return fmt.Appendf(nil, valueTemplate, string(b))
 }

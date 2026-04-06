@@ -223,7 +223,7 @@ func TestDB_NewIterator(t *testing.T) {
 	// The DB engine has more keys
 	keysCount := 20
 	for i := 1; i <= keysCount; i++ {
-		db.Put([]byte(fmt.Sprintf("%02d", i)), utils.NewRandomValue(10))
+		db.Put(fmt.Appendf(nil, "%02d", i), utils.NewRandomValue(10))
 	}
 
 	// Forward iteration
@@ -245,7 +245,7 @@ func TestDB_NewIterator(t *testing.T) {
 	// Forward seek
 	iter3.Rewind()
 	counter = 10
-	for iter3.Seek([]byte(fmt.Sprintf("%02d", counter))); iter3.Valid(); iter3.Next() {
+	for iter3.Seek(fmt.Appendf(nil, "%02d", counter)); iter3.Valid(); iter3.Next() {
 		assert.Equal(t, fmt.Sprintf("%02d", counter), string(iter3.Key()))
 		b, err = iter3.Value()
 		assert.Nil(t, err)
@@ -315,7 +315,7 @@ func TestDB_ListKeys(t *testing.T) {
 	// The DB engine has more than one key
 	keysCount := 20
 	for i := 11; i <= 30; i++ {
-		db.Put([]byte(fmt.Sprintf("%02d", i)), utils.NewRandomValue(8))
+		db.Put(fmt.Appendf(nil, "%02d", i), utils.NewRandomValue(8))
 	}
 	keys = db.ListKeys()
 	assert.Equal(t, keysCount, len(keys))
@@ -334,7 +334,7 @@ func TestDB_Fold(t *testing.T) {
 
 	// Put some data
 	for i := 11; i <= 30; i++ {
-		db.Put([]byte(fmt.Sprintf("%02d", i)), utils.NewRandomValue(8))
+		db.Put(fmt.Appendf(nil, "%02d", i), utils.NewRandomValue(8))
 	}
 
 	// Execure an uder-defined function
@@ -518,13 +518,13 @@ func TestDB_MMap(t *testing.T) {
 
 	now := time.Now()
 	db, _ = Launch(testingDBOptions)
-	t.Logf(fmt.Sprintf(logTemplate, DefaultDBOptions.MMapAtStartup, time.Since(now)))
+	t.Logf(logTemplate, DefaultDBOptions.MMapAtStartup, time.Since(now))
 	db.Close()
 
 	now = time.Now()
 	DefaultDBOptions.MMapAtStartup = !DefaultDBOptions.MMapAtStartup
 	db, _ = Launch(testingDBOptions)
-	t.Logf(fmt.Sprintf(logTemplate, DefaultDBOptions.MMapAtStartup, time.Since(now)))
+	t.Logf(logTemplate, DefaultDBOptions.MMapAtStartup, time.Since(now))
 	db.Close()
 }
 
