@@ -42,10 +42,10 @@ func Benchmark_Put(b *testing.B) {
 
 func Benchmark_Get(b *testing.B) {
 	rand.New(rand.NewSource(time.Now().UnixNano()))
-	b.ResetTimer()
+
 	b.ReportAllocs()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, err := db.Get(utils.NewKey(rand.Int()))
 		if err != nil && err != baradb.ErrKeyNotFound {
 			b.Fatal(err)
@@ -55,10 +55,10 @@ func Benchmark_Get(b *testing.B) {
 
 func Benchmark_Delete(b *testing.B) {
 	rand.New(rand.NewSource(time.Now().UnixNano()))
-	b.ResetTimer()
+
 	b.ReportAllocs()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		err := db.Delete(utils.NewKey(rand.Int()))
 		if err != nil && err != baradb.ErrKeyNotFound {
 			b.Fatal(err)
